@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.136.3",
-    "pandas>=3.0.3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
     "pyjwt[crypto]>=2.13.0",
@@ -20,4 +19,8 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+]
+# One-off Kaggle vehicle_reference import; never imported by the running app
+seed = [
+    "pandas>=3.0.3",
 ]

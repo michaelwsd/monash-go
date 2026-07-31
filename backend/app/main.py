@@ -18,17 +18,18 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.cors_origins, # can't use Depends as it doesn't invoke the function
     # Clerk sends its JWT in the Authorization header, not a cookie
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
+# app includes api_router → api_router includes users.router, so api under users becomes /api/v1/users/...
 app.include_router(api_router)
 
 
-# Registered on app, not api_router: health is infrastructure and must not move with the API version
+# registered on app, not api_router as health does not move with the API version
 @app.get("/health")
 async def health(settings: SettingsDep) -> HealthResponse:
     return HealthResponse(status="ok", environment=settings.environment)

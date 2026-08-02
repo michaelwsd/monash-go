@@ -20,7 +20,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,  # can't use Depends as it doesn't invoke the function
     # Clerk sends its JWT in the Authorization header, not a cookie
-    allow_credentials=False,
+    allow_credentials=False,  # requests don't carry cookies
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )

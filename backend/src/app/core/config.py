@@ -14,6 +14,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[3]
 class Settings(BaseSettings):
     supabase_url: str
     supabase_key: SecretStr
+    supabase_anon_key: SecretStr
     clerk_pem_public_key: str
     clerk_issuer: str
     google_maps_api_key: SecretStr

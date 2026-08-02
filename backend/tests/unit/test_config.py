@@ -7,6 +7,7 @@ from app.core.config import Settings
 BASE_ENV = {
     "SUPABASE_URL": "https://example.supabase.co",
     "SUPABASE_KEY": "test-key",
+    "SUPABASE_ANON_KEY": "anon-key",
     "CLERK_PEM_PUBLIC_KEY": "test-pem",
     "CLERK_ISSUER": "https://example.clerk.accounts.dev",
     "GOOGLE_MAPS_API_KEY": "test-maps-key",

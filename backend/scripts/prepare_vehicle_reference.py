@@ -188,7 +188,7 @@ def read_csv(name: str) -> pd.DataFrame:
             return pd.read_csv(path, encoding=encoding)
         except UnicodeDecodeError:
             continue
-    raise UnicodeDecodeError(f"could not decode {path}")
+    raise ValueError(f"could not decode {path} as utf-8-sig, cp1252, or latin-1")
 
 
 def load_conventional() -> pd.DataFrame:

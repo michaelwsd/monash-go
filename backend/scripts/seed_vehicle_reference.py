@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from postgrest import CountMethod
+
 from app.core.config import get_settings
 from supabase import Client, create_client
 
@@ -44,11 +46,13 @@ def seed(client: Client, rows: list[dict[str, Any]]) -> None:
 
 
 def verify(client: Client, expected: int) -> None:
-    total = client.table("vehicle_reference").select("id", count="exact", head=True).execute()
+    total = (
+        client.table("vehicle_reference").select("id", count=CountMethod.exact, head=True).execute()
+    )
 
     electric = (
         client.table("vehicle_reference")
-        .select("id", count="exact", head=True)  # only returns row counts and no row data
+        .select("id", count=CountMethod.exact, head=True)  # only returns row counts and no row data
         .eq("fuel_type", "electric")
         .is_("engine_size", "null")
         .execute()

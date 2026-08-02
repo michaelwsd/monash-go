@@ -11,6 +11,7 @@ BASE_ENV = {
     "CLERK_PEM_PUBLIC_KEY": "test-pem",
     "CLERK_ISSUER": "https://example.clerk.accounts.dev",
     "GOOGLE_MAPS_API_KEY": "test-maps-key",
+    "SERVO_SAVER_API_KEY": "test-servo-key",
     "CORS_ORIGINS": '["http://localhost:3000"]',
 }
 

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     clerk_pem_public_key: str
     clerk_issuer: str
     google_maps_api_key: SecretStr
+    servo_saver_api_key: SecretStr
     environment: Literal["development", "staging", "production"] = "development"
     cors_origins: list[str]
 

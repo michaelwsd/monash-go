@@ -16,6 +16,7 @@ def fake_settings() -> Settings:
         clerk_pem_public_key="test-pem",
         clerk_issuer="https://example.clerk.accounts.dev",
         google_maps_api_key=SecretStr("test-maps-key"),
+        servo_saver_api_key=SecretStr("test-servo-key"),
         environment="development",
         cors_origins=["http://localhost:3000"],
     )

@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BACKEND_DIR = Path(__file__).resolve().parents[3]
 
 
-# a method ot retrieve env, but with validation and conversion
+# a method to retrieve env, but with validation and conversion
 class Settings(BaseSettings):
     supabase_url: str
     supabase_key: SecretStr

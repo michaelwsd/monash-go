@@ -1,26 +1,200 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   Organic — design system tokens
+   ----------------------------------------------------------------------------
+   Copied verbatim from the design project's `_ds/organic-<id>/styles.css`.
+   This block is the ONLY sync point with the design system: to re-import an
+   updated theme, replace the values here and nothing else changes.
+
+   Everything below reads from these; no other file in the app may contain a
+   raw hex, font name, or magic radius.
+   ========================================================================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ds-bg: #f5ead8;
+  --ds-surface: #ebddc5;
+  --ds-text: #201e1d;
+  --ds-accent: #c67139;
+  --ds-accent-2: #7a8a5e;
+  --ds-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
+     same step of any role matches the others in visual value. */
+  --ds-neutral-100: #f9f4ed;
+  --ds-neutral-200: #eee7db;
+  --ds-neutral-300: #dcd3c4;
+  --ds-neutral-400: #c0b6a5;
+  --ds-neutral-500: #a19786;
+  --ds-neutral-600: #82796a;
+  --ds-neutral-700: #645c50;
+  --ds-neutral-800: #474238;
+  --ds-neutral-900: #2e2b25;
+
+  --ds-accent-100: #fff2eb;
+  --ds-accent-200: #ffe1d0;
+  --ds-accent-300: #ffc6a5;
+  --ds-accent-400: #f6a06b;
+  --ds-accent-500: #d67f48;
+  --ds-accent-600: #b2622d;
+  --ds-accent-700: #8c491a;
+  --ds-accent-800: #643312;
+  --ds-accent-900: #402310;
+
+  --ds-accent-2-100: #f0fae1;
+  --ds-accent-2-200: #e1eecc;
+  --ds-accent-2-300: #ccdbb2;
+  --ds-accent-2-400: #aebf92;
+  --ds-accent-2-500: #8fa073;
+  --ds-accent-2-600: #728157;
+  --ds-accent-2-700: #56633f;
+  --ds-accent-2-800: #3d472b;
+  --ds-accent-2-900: #272e1b;
+
+  /* Elevation — soft ink-tinted shadows tuned to the warm ground. */
+  --ds-shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --ds-shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --ds-shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
 }
 
+/* ============================================================================
+   Tailwind theme
+   ----------------------------------------------------------------------------
+   `--color-*: initial` wipes Tailwind's stock palette. That is deliberate:
+   with the defaults gone, `bg-blue-500` and `text-gray-400` stop compiling, so
+   the design system's "never hard-code a colour" rule is enforced by the build
+   rather than by review. Only the keywords the framework needs are re-added.
+   ========================================================================== */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-*: initial;
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-inherit: inherit;
+  --color-white: #fff;
+
+  /* Roles */
+  --color-ground: var(--ds-bg);
+  --color-surface: var(--ds-surface);
+  --color-ink: var(--ds-text);
+  --color-divider: var(--ds-divider);
+
+  /* Terracotta — the primary accent. Named for what it is, not its role, so
+     `text-clay-700` stays readable when a second accent enters the sentence. */
+  --color-clay: var(--ds-accent);
+  --color-clay-100: var(--ds-accent-100);
+  --color-clay-200: var(--ds-accent-200);
+  --color-clay-300: var(--ds-accent-300);
+  --color-clay-400: var(--ds-accent-400);
+  --color-clay-500: var(--ds-accent-500);
+  --color-clay-600: var(--ds-accent-600);
+  --color-clay-700: var(--ds-accent-700);
+  --color-clay-800: var(--ds-accent-800);
+  --color-clay-900: var(--ds-accent-900);
+
+  /* Sage — the second accent. In MonashGo it carries a fixed meaning: every
+     green/CO2-avoided number on the site is sage, and nothing else is. */
+  --color-sage: var(--ds-accent-2);
+  --color-sage-100: var(--ds-accent-2-100);
+  --color-sage-200: var(--ds-accent-2-200);
+  --color-sage-300: var(--ds-accent-2-300);
+  --color-sage-400: var(--ds-accent-2-400);
+  --color-sage-500: var(--ds-accent-2-500);
+  --color-sage-600: var(--ds-accent-2-600);
+  --color-sage-700: var(--ds-accent-2-700);
+  --color-sage-800: var(--ds-accent-2-800);
+  --color-sage-900: var(--ds-accent-2-900);
+
+  --color-sand-100: var(--ds-neutral-100);
+  --color-sand-200: var(--ds-neutral-200);
+  --color-sand-300: var(--ds-neutral-300);
+  --color-sand-400: var(--ds-neutral-400);
+  --color-sand-500: var(--ds-neutral-500);
+  --color-sand-600: var(--ds-neutral-600);
+  --color-sand-700: var(--ds-neutral-700);
+  --color-sand-800: var(--ds-neutral-800);
+  --color-sand-900: var(--ds-neutral-900);
+
+  /* Spacing — the design system runs a 1.10x density scale (4.4 / 8.8 / 13.2 /
+     17.6 / 26.4 / 35.2px). Re-basing Tailwind's unit to 4.4px reproduces every
+     one of those steps exactly at p-1 / p-2 / p-3 / p-4 / p-6 / p-8, and gives
+     the intermediate steps for free. */
+  --spacing: 4.4px;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  /* The system's "rounded frame" rule: cards and dialogs go one step past lg
+     (28 x 1.15). Buttons, tags and inputs go fully pill via `rounded-full`. */
+  --radius-card: 32px;
+
+  --shadow-sm: var(--ds-shadow-sm);
+  --shadow-md: var(--ds-shadow-md);
+  --shadow-lg: var(--ds-shadow-lg);
+
+  /* Caprasimo is the only display voice; Figtree carries everything else.
+     Both are self-hosted by next/font, which sets these two variables. */
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
+  --font-display: var(--font-caprasimo), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ============================================================================
+   Base layer
+   ========================================================================== */
+@layer base {
+  body {
+    background-color: var(--color-ground);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* The system's body size. Set on body, never on html: overriding the root
+       font size would silently rescale a visitor who has raised their browser
+       default for readability. Tailwind's rem-based text-* utilities stay
+       anchored to that preference. */
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+  }
+
+  /* Themed focus, never the browser's blue ring. */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-clay);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-clay) 30%, transparent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ============================================================================
+   Utilities
+   ========================================================================== */
+
+/* Photographs are desaturated and lifted so they sit back into the warm page
+   instead of on top of it. Every content image goes through this. */
+@utility washed {
+  filter: saturate(0.6) contrast(0.85) brightness(1.1) opacity(0.94);
+}
+
+/* The system's small uppercase label. Used often enough to earn a name. */
+@utility label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-ink) 55%, transparent);
 }

@@ -15,7 +15,8 @@ from app.exceptions.errors import DomainError
 
 async def domain_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """
-    called when an unknown error is raised and nothing catches it in the service or route
+    called when an unknown error (that inherits DomainError) is raised and nothing
+    catches it in the service or route
     Starlette catches it at the app boundary and calls this handler
     """
     error = cast(

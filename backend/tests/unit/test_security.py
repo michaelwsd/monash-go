@@ -21,10 +21,22 @@ def settings_with_real_key(monkeypatch: pytest.MonkeyPatch, rsa_keys: tuple[str,
     monkeypatch.setattr(security, "get_settings", lambda: settings)
 
 
-def test_valid_token_returns_the_subject(make_token: Callable[..., str]) -> None:
-    token = make_token(sub="user_2abc123")
+def test_valid_token_returns_the_claims(make_token: Callable[..., str]) -> None:
+    token = make_token(sub="user_2abc123", email="abc@student.monash.edu")
 
-    assert security.verify_clerk_token(token) == "user_2abc123"
+    claims = security.verify_clerk_token(token)
+
+    assert claims.clerk_id == "user_2abc123"
+    assert claims.email == "abc@student.monash.edu"
+    assert claims.full_name == "Test User"
+
+
+def test_missing_custom_claim_is_rejected(make_token: Callable[..., str]) -> None:
+    """a Clerk instance whose session token template was never configured"""
+    token = make_token(email=None)
+
+    with pytest.raises(InvalidCredentialsError):
+        security.verify_clerk_token(token)
 
 
 def test_expired_token_is_rejected(make_token: Callable[..., str]) -> None:

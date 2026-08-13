@@ -23,6 +23,7 @@ CREATE TABLE users (
     clerk_id      TEXT UNIQUE NOT NULL,
     email         TEXT NOT NULL,
     phone         TEXT NOT NULL,
+    home_campus   campus,
     full_name     TEXT NOT NULL,
     role          user_role NOT NULL DEFAULT 'passenger',
     is_concession BOOLEAN NOT NULL DEFAULT false,

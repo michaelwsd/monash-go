@@ -25,7 +25,8 @@ def protected(
     settings = fake_settings().model_copy(
         update={"clerk_pem_public_key": public_pem, "clerk_issuer": TEST_ISSUER}
     )
-    # in the app.core.security module, replace the name get_settings with a function that returns fake settings
+    # in the app.core.security module, replace the name get_settings with a function
+    # that returns fake settings
     monkeypatch.setattr(security, "get_settings", lambda: settings)
 
     reached: list[str] = []

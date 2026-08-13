@@ -35,3 +35,9 @@ class PermissionDeniedError(DomainError):
     """caller is authenticated but not allowed to do this"""
 
     status_code = 403
+
+
+class InvalidCredentialsError(DomainError):
+    """token is missing, malformed, expired, or not signed by Clerk"""
+
+    status_code = 401

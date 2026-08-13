@@ -31,7 +31,7 @@ class ClerkClaims(BaseModel):
     full_name: str
 
 
-# token -> userid
+# token -> Clerk fields
 def verify_clerk_token(token: str) -> ClerkClaims:
     settings = get_settings()
     try:
@@ -51,4 +51,4 @@ def verify_clerk_token(token: str) -> ClerkClaims:
             clerk_id=claims["sub"], email=claims["email"], full_name=claims["full_name"]
         )
     except ValidationError as exc:
-        raise ValidationError("invalid or expired token") from exc
+        raise InvalidCredentialsError("invalid or expired token") from exc

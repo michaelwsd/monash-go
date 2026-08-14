@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.deps import SettingsDep
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+from app.exceptions.handlers import register_exception_handlers
 from app.schemas.health import HealthResponse
 
 settings = get_settings()
@@ -15,6 +16,8 @@ app = FastAPI(
     docs_url=None if settings.environment == "production" else "/docs",
     redoc_url=None if settings.environment == "production" else "/redoc",
 )
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

@@ -4,3 +4,4 @@ AGENTS.md
 docs/build_plan.md
 docs/sprints/
 .DS_Store
+docs/*.html

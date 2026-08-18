@@ -1,3 +1,18 @@
+"""What a route can ask for by name.
+
+Each name pairs a type with the function that produces it. A route declares
+`db: SupabaseDep` and FastAPI calls get_supabase before the body runs, so no
+route builds its own client or parses its own Authorization header.
+
+They live in api/ because Depends is an HTTP concern. get_settings and
+get_supabase know nothing about requests; this is the thin adapter that makes
+them requestable, which keeps FastAPI out of core/ and db/.
+
+Auth dependencies raise before the body runs, so an invalid token is a 401 the
+route never sees. All of this is real at runtime: tests swap implementations
+through app.dependency_overrides.
+"""
+
 from typing import Annotated
 
 from fastapi import Depends

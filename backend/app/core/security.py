@@ -19,13 +19,20 @@ rs256: a key pair, private key signs (clerk) and public key verifies
 """
 
 import jwt
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
 from app.exceptions.errors import InvalidCredentialsError
 
 
-# token -> userid
-def verify_clerk_token(token: str) -> str:
+class ClerkClaims(BaseModel):
+    clerk_id: str
+    email: str
+    full_name: str
+
+
+# token -> Clerk fields
+def verify_clerk_token(token: str) -> ClerkClaims:
     settings = get_settings()
     try:
         # verifies jwt token
@@ -34,12 +41,14 @@ def verify_clerk_token(token: str) -> str:
             settings.clerk_pem_public_key,
             algorithms=["RS256"],
             issuer=settings.clerk_issuer,
-            options={"verify_aud": False, "require": ["exp", "iss", "sub"]},
+            options={"verify_aud": False, "require": ["exp", "iss", "sub", "email", "full_name"]},
         )
     except jwt.PyJWTError as exc:
         raise InvalidCredentialsError("invalid or expired token") from exc
 
-    userid = claims.get("sub")
-    if not isinstance(userid, str) or not userid:
-        raise InvalidCredentialsError("invalid or expired token")
-    return userid
+    try:
+        return ClerkClaims(
+            clerk_id=claims["sub"], email=claims["email"], full_name=claims["full_name"]
+        )
+    except ValidationError as exc:
+        raise InvalidCredentialsError("invalid or expired token") from exc

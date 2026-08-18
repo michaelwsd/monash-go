@@ -74,18 +74,28 @@ def make_token(rsa_keys: tuple[str, str]) -> Callable[..., str]:
 
     def _make(
         *,
-        sub: str = "user_2abc123",
-        issuer: str = TEST_ISSUER,
+        sub: str | None = "user_2abc123",
+        issuer: str | None = TEST_ISSUER,
+        email: str | None = "test@student.monash.edu",
+        full_name: str | None = "Test User",
         expires_in: int = 3600,
         signing_key: str | None = None,
     ) -> str:
         now = datetime.now(tz=UTC)
         payload: dict[str, Any] = {
-            "sub": sub,
-            "iss": issuer,
             "iat": now,
             "exp": now + timedelta(seconds=expires_in),
         }
+        # None means omit the claim entirely, so "required claim missing" is
+        # testable and not just "claim has the wrong value"
+        for key, value in (
+            ("sub", sub),
+            ("iss", issuer),
+            ("email", email),
+            ("full_name", full_name),
+        ):
+            if value is not None:
+                payload[key] = value
         return jwt.encode(payload, signing_key or private_pem, algorithm="RS256")
 
     return _make

@@ -6,8 +6,8 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/ - resolved from this file so the env file loads regardless of cwd
-# core -> app -> src -> backend
-BACKEND_DIR = Path(__file__).resolve().parents[3]
+# core -> app -> backend
+BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 # a method to retrieve env, but with validation and conversion

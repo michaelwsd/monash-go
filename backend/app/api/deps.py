@@ -37,7 +37,7 @@ def get_current_user_id(
 
 
 # declares the user type in 'user: CurrentUser' in a route
-# route never runs if the token is invalid
+# route never runs if the token is invalid (function always called before route)
 CurrentUser = Annotated[str, Depends(get_current_user_id)]
 
 CurrentClaims = Annotated[ClerkClaims, Depends(get_current_claims)]

@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.exceptions.errors import NotFoundError
+from app.exceptions.errors import NotFoundError, PermissionDeniedError
 from app.schemas.user import User, UserUpdate
 from app.services import user_service
 from supabase import Client
@@ -126,4 +126,26 @@ def test_updating_an_unknown_user_is_not_found(
     repos: tuple[FakeUserRepo, FakeRewardsRepo],
 ) -> None:
     with pytest.raises(NotFoundError):
-        user_service.update_profile(NO_DB, clerk_id="nobody", changes=UserUpdate(is_concession=True))
+        user_service.update_profile(
+            NO_DB, clerk_id="nobody", changes=UserUpdate(is_concession=True)
+        )
+
+
+def test_non_monash_email_is_rejected(
+    repos: tuple[FakeUserRepo, FakeRewardsRepo],
+) -> None:
+    users, _ = repos
+
+    with pytest.raises(PermissionDeniedError):
+        user_service.sync(NO_DB, clerk_id="user_1", email="someone@gmail.com", full_name="A B")
+
+    assert users.inserts == 0  # no row created for a rejected domain
+
+
+def test_both_monash_domains_are_accepted(
+    repos: tuple[FakeUserRepo, FakeRewardsRepo],
+) -> None:
+    user_service.sync(NO_DB, clerk_id="user_1", email="a@student.monash.edu", full_name="A B")
+    user_service.sync(NO_DB, clerk_id="user_2", email="b@monash.edu", full_name="C D")
+
+    assert repos[0].inserts == 2

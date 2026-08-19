@@ -45,7 +45,7 @@ def get_current_claims(
     return verify_clerk_token(credentials.credentials)
 
 
-def get_current_user_id(
+def get_current_user_clerk_id(
     claims: Annotated[ClerkClaims, Depends(get_current_claims)],
 ) -> str:
     return claims.clerk_id
@@ -53,6 +53,6 @@ def get_current_user_id(
 
 # declares the user type in 'user: CurrentUser' in a route
 # route never runs if the token is invalid (function always called before route)
-CurrentUser = Annotated[str, Depends(get_current_user_id)]
+CurrentUser = Annotated[str, Depends(get_current_user_clerk_id)]
 
 CurrentClaims = Annotated[ClerkClaims, Depends(get_current_claims)]

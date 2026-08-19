@@ -1,5 +1,7 @@
 """Every users-table query"""
 
+from typing import Any
+
 from app.schemas.user import User
 from supabase import Client
 
@@ -45,3 +47,9 @@ def update_clerk_fields(db: Client, *, clerk_id: str, email: str, full_name: str
     )
 
     return User.model_validate(res.data[0])
+
+
+def update_profile(db: Client, *, clerk_id: str, fields: dict[str, Any]) -> User | None:
+    """update the columns in fields, none if no rows matched"""
+    res = db.table(TABLE).update(fields).execute()
+    return User.model_validate(res.data[0]) if res.data else None

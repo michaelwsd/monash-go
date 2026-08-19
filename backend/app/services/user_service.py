@@ -1,6 +1,6 @@
-from app.exceptions.errors import DomainError
+from app.exceptions.errors import DomainError, NotFoundError
 from app.repositories import rewards_repository, user_repository
-from app.schemas.user import User
+from app.schemas.user import User, UserUpdate
 from supabase import Client
 
 
@@ -32,3 +32,26 @@ def sync(db: Client, *, clerk_id: str, email: str, full_name: str) -> User:
         )
 
     return existing
+
+
+def update_profile(db: Client, *, clerk_id: str, changes: UserUpdate) -> User:
+    """
+    apply a partial profile update
+    """
+    # turns into a dict, only include the fields that are actually sent
+    fields = changes.model_dump(exclude_unset=True)
+
+    if "phone" in fields and fields["phone"] is None:
+        # phone cannot be removed
+        raise DomainError("phone cannot be cleared")
+
+    if not fields:
+        existing = user_repository.get_by_clerk_id(db, clerk_id)
+        if not existing:
+            raise NotFoundError("user not found")
+        return existing
+
+    updated = user_repository.update_profile(db, clerk_id=clerk_id, fields=fields)
+    if not updated:
+        raise NotFoundError("user not found")
+    return updated

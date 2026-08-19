@@ -7,7 +7,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.schemas.user import User
+from app.exceptions.errors import NotFoundError
+from app.schemas.user import User, UserUpdate
 from app.services import user_service
 from supabase import Client
 
@@ -48,6 +49,15 @@ class FakeUserRepo:
 
     def update_clerk_fields(self, db: object, *, clerk_id: str, email: str, full_name: str) -> User:
         updated = self.rows[clerk_id].model_copy(update={"email": email, "full_name": full_name})
+        self.rows[clerk_id] = updated
+        return updated
+
+    def update_profile(
+        self, db: object, *, clerk_id: str, fields: dict[str, object]
+    ) -> User | None:
+        if clerk_id not in self.rows:
+            return None
+        updated = self.rows[clerk_id].model_copy(update=fields)
         self.rows[clerk_id] = updated
         return updated
 
@@ -94,3 +104,26 @@ def test_syncing_again_changes_nothing(
     assert users.inserts == 1
     assert len(users.rows) == 1
     assert users.rows["user_1"] == first
+
+
+def test_partial_update_leaves_other_fields_alone(
+    repos: tuple[FakeUserRepo, FakeRewardsRepo],
+) -> None:
+    users, _ = repos
+    user_service.sync(NO_DB, clerk_id="user_1", email="a@student.monash.edu", full_name="A B")
+    user_service.update_profile(NO_DB, clerk_id="user_1", changes=UserUpdate(phone="0412 345 678"))
+
+    result = user_service.update_profile(
+        NO_DB, clerk_id="user_1", changes=UserUpdate(is_concession=True)
+    )
+
+    assert result.is_concession is True
+    assert result.phone == "0412345678"  # not blanked by the second call
+    assert result.email == "a@student.monash.edu"
+
+
+def test_updating_an_unknown_user_is_not_found(
+    repos: tuple[FakeUserRepo, FakeRewardsRepo],
+) -> None:
+    with pytest.raises(NotFoundError):
+        user_service.update_profile(NO_DB, clerk_id="nobody", changes=UserUpdate(is_concession=True))

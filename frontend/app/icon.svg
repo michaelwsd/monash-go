@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="MonashGo">
+  <title>MonashGo</title>
+  <!-- Leaf whose midrib is a dashed road centre line: green travel in one shape.
+       Colours are the app's own tokens: zinc-950 ground, the eco emerald ramp,
+       and eco-muted for the markings. See app/globals.css. -->
+  <defs>
+    <linearGradient id="leaf" x1="26.5" y1="5.5" x2="5.5" y2="26.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="32" height="32" rx="7.5" fill="#09090b"/>
+
+  <path d="M5.5 26.5C5.5 14.5 14.5 5.5 26.5 5.5C26.5 17.5 17.5 26.5 5.5 26.5Z" fill="url(#leaf)"/>
+
+  <!-- Three long dashes rather than many short ones, so the line still reads as a
+       line at 16px instead of breaking into specks. -->
+  <path d="M8.2 23.8C11.8 17 17 11.8 23.8 8.2" fill="none" stroke="#ecfdf5"
+        stroke-width="2.1" stroke-linecap="round" stroke-dasharray="5 2.9"/>
+</svg>

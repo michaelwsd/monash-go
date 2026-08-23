@@ -1,9 +1,8 @@
+from app.core.constants import MONASH_EMAIL_DOMAINS
 from app.exceptions.errors import DomainError, NotFoundError, PermissionDeniedError
 from app.repositories import rewards_repository, user_repository
 from app.schemas.user import User, UserUpdate
 from supabase import Client
-
-MONASH_EMAIL_DOMAINS = ("@student.monash.edu", "@monash.edu")
 
 
 def sync(db: Client, *, clerk_id: str, email: str, full_name: str) -> User:

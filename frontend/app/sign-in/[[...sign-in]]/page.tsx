@@ -32,22 +32,6 @@ export default async function SignInPage({
 
   return (
     <main className="flex flex-1 items-center justify-center bg-muted/40 px-4 py-10">
-      {/* Pressing back from Google leaves Clerk permanently stuck at
-          status "loading": its script loads but never requests /v1/environment
-          or /v1/client. React therefore never hydrates, and the sign-in button
-          below is inert HTML that swallows every click with no error.
-
-          This has to run before React, because the thing that is broken is
-          hydration itself - an effect inside a component would never fire.
-          Reloading turns the visit into an ordinary load, which initialises
-          Clerk normally, and sets the navigation type to "reload" so it cannot
-          loop. Scoped to this page rather than the layout so back navigation
-          stays instant everywhere else. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `if(performance.getEntriesByType('navigation')[0]?.type==='back_forward'){location.reload()}`,
-        }}
-      />
       <Card className="w-full max-w-[400px] gap-0 px-5 py-[26px] sm:px-6">
         <h1 className="text-[26px] font-semibold tracking-[-0.025em]">
           MonashGo

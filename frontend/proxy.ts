@@ -10,7 +10,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
  */
 
 // Pages a signed-out visitor is allowed to see. Everything else needs a session.
-const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
+// "/" is deliberately NOT here: it is the dashboard (artboard 1f), so a
+// signed-out visitor is sent to /sign-in instead of seeing an empty shell.
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {

@@ -1,0 +1,1 @@
+MONASH_EMAIL_DOMAINS = ("@student.monash.edu", "@monash.edu")

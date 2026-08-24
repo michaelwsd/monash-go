@@ -51,10 +51,6 @@ export default async function SignInPage({
 
         <SignInButton />
 
-        <p className="mt-2.5 text-center text-[11.5px] text-muted-foreground">
-          Only @student.monash.edu and @monash.edu accounts
-        </p>
-
         {rejected && (
           <Alert
             variant="destructive"

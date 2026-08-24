@@ -41,3 +41,9 @@ class InvalidCredentialsError(DomainError):
     """token is missing, malformed, expired, or not signed by Clerk"""
 
     status_code = 401
+
+
+class InvalidInputError(DomainError):
+    """input is well-formed but violates a business rule"""
+
+    status_code = 400

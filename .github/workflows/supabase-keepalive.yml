@@ -2,16 +2,55 @@ name: Supabase Keep Alive
 
 on:
   schedule:
-    - cron: '0 0 */4 * *' # Every 4 days, safely inside Supabase's 7-day pause window
-  workflow_dispatch: # Allow manual trigger
+    # Daily, at an off-peak minute. GitHub's scheduled runner is best-effort:
+    # jobs queued on the hour are routinely delayed and sometimes dropped
+    # outright under load. On the old every-4-days cadence two dropped runs in
+    # a row put the project past Supabase's 7-day pause window, so the schedule
+    # now carries enough slack to survive six consecutive misses.
+    - cron: '17 14 * * *'
+  workflow_dispatch:
+
+# A run already in flight is enough; never stack them.
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Ping Supabase
+      - name: Query Postgres through PostgREST
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          curl -fsS "${SUPABASE_URL}/auth/v1/health" -H "apikey: ${SUPABASE_ANON_KEY}"
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY secret is not set."
+            exit 1
+          fi
+
+          # /rest/v1 is PostgREST, so this becomes a real SELECT executed by
+          # Postgres. That is the activity Supabase's pause timer actually
+          # watches. Retries cover transient cold-start and network blips.
+          body=$(curl -fsS \
+            --retry 5 --retry-delay 15 --retry-all-errors \
+            --max-time 30 \
+            "${SUPABASE_URL}/rest/v1/keepalive?select=id,pinged_at&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+
+          echo "Response: ${body}"
+
+          # An empty array means the request reached PostgREST but the row did
+          # not come back - a dropped table, a revoked policy, or a rotated
+          # key. That is a silently dead probe, which is the exact failure this
+          # workflow is being fixed for, so treat it as a failure.
+          if ! echo "${body}" | jq -e 'type == "array" and length > 0' >/dev/null; then
+            echo "::error::Keep-alive query returned no row. The probe is not reaching Postgres."
+            exit 1
+          fi
+
+          echo "Postgres responded. Project is awake."

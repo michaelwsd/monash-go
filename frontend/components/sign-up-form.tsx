@@ -17,6 +17,14 @@ import {
   Leaf,
 } from "lucide-react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 // ---------------------------------------------------------------------------
 // MonashGo onboarding form
 //
@@ -121,7 +129,7 @@ function ModeCard({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-1 flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+      className={`flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
         selected
           ? "border-gray-900 bg-gray-50"
           : "border-gray-200 bg-white hover:border-gray-300"
@@ -149,17 +157,84 @@ interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
 }
 
-function TextField({ label, ...props }: TextFieldProps) {
+/* One source of truth for field chrome, so the input and the select can never
+   drift apart on border, radius, padding or focus ring. */
+const FIELD =
+  "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600";
+
+function FieldLabel({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-gray-700">
         {label}
       </span>
-      <input
-        {...props}
-        className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-      />
+      {children}
     </label>
+  );
+}
+
+function TextField({ label, ...props }: TextFieldProps) {
+  return (
+    <FieldLabel label={label}>
+      <input {...props} className={`${FIELD} placeholder-gray-400`} />
+    </FieldLabel>
+  );
+}
+
+interface SelectFieldProps {
+  label: string;
+  placeholder: string;
+  options: readonly string[];
+  value: string;
+  onValueChange: (value: string) => void;
+}
+
+/* A native <select>'s option list is drawn by the OS, so CSS cannot reach it:
+   no radius, no padding, no token colours, and `color-scheme` in globals.css is
+   the only lever over even its light/dark appearance. This is the Radix listbox
+   instead - real DOM we own, so the panel matches the card in any theme, and
+   keyboard navigation and typeahead come from the primitive.
+
+   Radix has no concept of an empty option, so the placeholder lives on
+   SelectValue. "" is passed through rather than collapsed to undefined: Radix
+   already reads it as "nothing chosen", and undefined would make the component
+   uncontrolled until the first pick. */
+function SelectField({
+  label,
+  placeholder,
+  options,
+  value,
+  onValueChange,
+}: SelectFieldProps) {
+  return (
+    <FieldLabel label={label}>
+      <Select value={value} onValueChange={onValueChange}>
+        {/* The trigger ships at h-8 with token colours; these overrides sit it
+            on the same chrome as TextField. `data-[size=default]:h-auto` rather
+            than `h-auto` because the default height is set through a data
+            attribute, which outranks a bare utility. */}
+        <SelectTrigger
+          className={`${FIELD} w-full justify-between data-[size=default]:h-auto data-placeholder:text-gray-400 focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600`}
+        >
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        {/* `popper` drops the panel below the field. The default,
+            `item-aligned`, covers the trigger the way a native select does,
+            which is what made the old menu look like it was floating loose. */}
+        <SelectContent
+          position="popper"
+          align="start"
+          sideOffset={6}
+          className="w-(--radix-select-trigger-width)"
+        >
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </FieldLabel>
   );
 }
 
@@ -205,7 +280,11 @@ export default function OnboardingForm({
   };
 
   return (
-    <div className="min-h-full w-full bg-gray-50 flex flex-col items-center px-4 py-10">
+    /* `flex-1`, not `min-h-full`: <body> is `min-h-full flex flex-col` with
+       auto height, so a percentage min-height here resolves to zero and the
+       grey ground stops at the card. Growing to fill the body's flex column
+       is what app/sign-in does too. */
+    <div className="flex flex-1 flex-col items-center justify-center bg-gray-50 px-4 py-10">
       {/* Header, echoing the dashboard's top bar */}
       <div className="w-full max-w-lg mb-6 flex items-center justify-between">
         <span className="text-lg font-bold text-gray-900">MonashGo</span>
@@ -223,13 +302,13 @@ export default function OnboardingForm({
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
         {step === 0 && (
           <div className="space-y-6">
             <div>
               <Eyebrow>About you</Eyebrow>
               <h1 className="text-xl font-bold text-gray-900">
-                Let's set up your profile
+                Let&rsquo;s set up your profile
               </h1>
               <p className="mt-1 text-sm text-gray-500">
                 Takes about a minute. This helps us match you with the right
@@ -274,7 +353,7 @@ export default function OnboardingForm({
                 Which campuses do you travel to?
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Select all that apply. We'll show you rides on these routes
+                Select all that apply. We&rsquo;ll show you rides on these routes
                 first.
               </p>
             </div>
@@ -301,11 +380,11 @@ export default function OnboardingForm({
                 How do you usually get to campus?
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                We'll use this to personalise ride matches and impact tracking.
+                We&rsquo;ll use this to personalise ride matches and impact tracking.
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <ModeCard
                 label="Drive"
                 description="Mostly drive myself"
@@ -344,28 +423,15 @@ export default function OnboardingForm({
                     setForm((f) => ({ ...f, carMake: e.target.value }))
                   }
                 />
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Fuel type
-                  </span>
-                  <select
-                    value={form.fuelType}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        fuelType: e.target.value as FuelType | "",
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-                  >
-                    <option value="">Select fuel type</option>
-                    {FUEL_TYPES.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <SelectField
+                  label="Fuel type"
+                  placeholder="Select fuel type"
+                  options={FUEL_TYPES}
+                  value={form.fuelType}
+                  onValueChange={(fuelType) =>
+                    setForm((f) => ({ ...f, fuelType: fuelType as FuelType }))
+                  }
+                />
               </div>
             )}
           </div>
@@ -376,7 +442,7 @@ export default function OnboardingForm({
             <div>
               <Eyebrow>Almost done</Eyebrow>
               <h1 className="text-xl font-bold text-gray-900">
-                Here's your profile
+                Here&rsquo;s your profile
               </h1>
               <p className="mt-1 text-sm text-gray-500">
                 You can update this any time from your account settings.
@@ -414,7 +480,7 @@ export default function OnboardingForm({
             <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3">
               <Leaf className="h-4 w-4 text-emerald-600 shrink-0" />
               <p className="text-xs text-emerald-800">
-                We'll use this to start tracking your CO₂ avoided from your very
+                We&rsquo;ll use this to start tracking your CO₂ avoided from your very
                 first trip.
               </p>
             </div>

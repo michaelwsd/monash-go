@@ -63,6 +63,11 @@
    with emerald reserved for CO2 and red for rejection states.
    Hex equivalents are noted so the design file stays greppable. */
 :root {
+  /* Native widgets (select popups, scrollbars, the text caret) are drawn by
+     the OS, not by CSS. Without this they follow the OS dark preference and
+     a dark option list opens over the light page. Paired below so a future
+     theme toggle moves them together. */
+  color-scheme: light;
   --background: oklch(1 0 0); /* #ffffff */
   --foreground: oklch(0.141 0.005 285.823); /* #09090b zinc-950 */
   --card: oklch(1 0 0); /* #ffffff */
@@ -108,6 +113,7 @@
    defined in both themes so nothing falls back to an undefined colour if a
    theme toggle is added later. */
 .dark {
+  color-scheme: dark;
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);

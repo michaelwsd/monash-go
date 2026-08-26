@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MonashGo Test Plan</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  :root{
+    --ink:#1a1a1a; --mid:#4a4a4a; --soft:#767676; --line:#c9c9c9;
+    --rule:#e4e4e4; --accent:#1f6d43;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:12mm; background:#fff; color:var(--ink);
+    font:10pt/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .sheet{max-width:273mm; margin:0 auto}
+  header{border-bottom:2px solid var(--ink); padding-bottom:6px; margin-bottom:12px}
+  h1{font-size:17pt; margin:0 0 2px; letter-spacing:-.2px}
+  .sub{font-size:9pt; color:var(--soft)}
+  .sub b{color:var(--mid); font-weight:600}
+  h2{
+    font-size:9pt; text-transform:uppercase; letter-spacing:1px;
+    margin:10px 0 6px; padding-bottom:3px; border-bottom:1px solid var(--rule);
+    color:var(--accent);
+  }
+  table{width:100%; border-collapse:collapse; font-size:9.4pt}
+  th{
+    text-align:left; font-weight:600; color:var(--mid); padding:4px 10px 4px 0;
+    border-bottom:1px solid var(--line); vertical-align:bottom; font-size:8.2pt;
+    text-transform:uppercase; letter-spacing:.6px;
+  }
+  td{padding:7px 10px 7px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td:first-child,th:first-child{padding-left:0}
+  .lvl{font-weight:600; white-space:nowrap; font-size:10pt}
+  .eg{color:var(--mid)}
+  svg{display:block; width:100%; max-width:200mm; height:auto; margin:0 auto}
+  footer{
+    margin-top:8px; padding-top:4px; border-top:1px solid var(--rule);
+    font-size:8pt; color:var(--soft); display:flex; justify-content:space-between; gap:10px;
+  }
+  @media print{ body{padding:0} .sheet{max-width:none} }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header>
+  <h1>MonashGo Test Plan</h1>
+  <div class="sub">
+    <b>FIT3162 Group 26</b> · Raneth Fernando, Wendy Huang, Vanessa Lu, Khang Tieu, Michael Wang ·
+    Testing Co-ordinators: <b>Michael, Raneth</b> · Version 1.0, 20 August 2026
+  </div>
+</header>
+
+<h2>How the test documents fit together</h2>
+
+<svg viewBox="0 0 700 226" role="img" aria-label="Test document hierarchy for MonashGo">
+  <defs>
+    <marker id="a" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="#4a4a4a"/>
+    </marker>
+    <style>
+      .bx{fill:#fff;stroke:#1a1a1a;stroke-width:1}
+      .bx2{fill:#f7f7f6;stroke:#4a4a4a;stroke-width:.9}
+      .exec{fill:#1f6d43;stroke:none}
+      .t{font:600 9px "Helvetica Neue",Helvetica,Arial;fill:#1a1a1a}
+      .ts{font:7.8px "Helvetica Neue",Helvetica,Arial;fill:#4a4a4a}
+      .tw{font:600 9.2px "Helvetica Neue",Helvetica,Arial;fill:#fff}
+      .ln{stroke:#4a4a4a;stroke-width:.9;fill:none}
+      .an{font:italic 7.6px "Helvetica Neue",Helvetica,Arial;fill:#767676}
+    </style>
+  </defs>
+
+  <rect class="bx" x="255" y="4" width="190" height="30" rx="2"/>
+  <text class="t" x="350" y="16" text-anchor="middle">Master Test Plan</text>
+  <text class="ts" x="350" y="27" text-anchor="middle">levels, tools, roles, reporting</text>
+
+  <path class="ln" d="M350,34 L350,50 M78,50 L622,50"/>
+  <path class="ln" d="M78,50 L78,64 M259,50 L259,64 M441,50 L441,64 M622,50 L622,64" marker-end="url(#a)"/>
+
+  <rect class="bx" x="8" y="64" width="140" height="38" rx="2"/>
+  <text class="t" x="78" y="79" text-anchor="middle">Unit Test Plan</text>
+  <text class="ts" x="78" y="91" text-anchor="middle">one function on its own</text>
+
+  <rect class="bx" x="189" y="64" width="140" height="38" rx="2"/>
+  <text class="t" x="259" y="79" text-anchor="middle">Integration Test Plan</text>
+  <text class="ts" x="259" y="91" text-anchor="middle">parts working together</text>
+
+  <rect class="bx" x="371" y="64" width="140" height="38" rx="2"/>
+  <text class="t" x="441" y="79" text-anchor="middle">System Test Plan</text>
+  <text class="ts" x="441" y="91" text-anchor="middle">the live site, end to end</text>
+
+  <rect class="bx" x="552" y="64" width="140" height="38" rx="2"/>
+  <text class="t" x="622" y="79" text-anchor="middle">Acceptance Test Plan</text>
+  <text class="ts" x="622" y="91" text-anchor="middle">does it do what we promised</text>
+
+  <path class="ln" d="M622,102 L622,116" marker-end="url(#a)"/>
+  <rect class="bx2" x="546" y="116" width="152" height="30" rx="2"/>
+  <text class="t" x="622" y="128" text-anchor="middle">Acceptance Test Design</text>
+  <text class="ts" x="622" y="139" text-anchor="middle">how we show a requirement passes</text>
+
+  <path class="ln" d="M622,146 L622,155 M400,155 L622,155 M400,155 L400,164 M622,155 L622,164" marker-end="url(#a)"/>
+  <rect class="bx2" x="316" y="164" width="168" height="30" rx="2"/>
+  <text class="t" x="400" y="176" text-anchor="middle">Test Cases</text>
+  <text class="ts" x="400" y="187" text-anchor="middle">what goes in, what should come out</text>
+
+  <rect class="bx2" x="546" y="164" width="152" height="30" rx="2"/>
+  <text class="t" x="622" y="176" text-anchor="middle">Test Procedures</text>
+  <text class="ts" x="622" y="187" text-anchor="middle">how to set it up and run it</text>
+
+  <path class="ln" d="M400,194 L400,203 M622,194 L622,203 M400,203 L622,203 M511,203 L511,208" marker-end="url(#a)"/>
+  <rect class="exec" x="401" y="208" width="220" height="18" rx="2"/>
+  <text class="tw" x="511" y="220" text-anchor="middle">Test Execution</text>
+
+  <text class="an" x="8" y="132">The four plans across the top are the four</text>
+  <text class="an" x="8" y="144">rows in the table below. We have only drawn</text>
+  <text class="an" x="8" y="156">the design, cases and procedures under</text>
+  <text class="an" x="8" y="168">acceptance so the diagram stays readable.</text>
+  <text class="an" x="8" y="180">Every level has all three. At the automated</text>
+  <text class="an" x="8" y="192">levels they live inside the test files.</text>
+</svg>
+
+<h2>The four levels</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:11%">Level</th>
+      <th style="width:20%">What it checks</th>
+      <th style="width:35%">A real example from MonashGo</th>
+      <th style="width:20%">Who does it, and when</th>
+      <th style="width:14%">How</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="lvl">Unit</td>
+      <td>One function by itself, with the database and the network faked.</td>
+      <td class="eg">The emissions formula gives 2.04&nbsp;kg of CO<sub>2</sub> for a 2024 Camry Hybrid over 18&nbsp;km. We worked that number out by hand first, so we already know what the right answer looks like.</td>
+      <td>Whoever writes the code. The test comes first, before the code it is testing exists.</td>
+      <td>pytest, with stand-in versions of the database</td>
+    </tr>
+    <tr>
+      <td class="lvl">Integration</td>
+      <td>Several parts working together, through a real request to the API.</td>
+      <td class="eg">Booking a seat really does drop the seat count by one, and a request from someone who is not properly signed in gets turned away.</td>
+      <td>The person who built the feature, checked by a Testing Co-ordinator at the end of each sprint.</td>
+      <td>pytest through a test client</td>
+    </tr>
+    <tr>
+      <td class="lvl">System</td>
+      <td>The finished product on the live site, from the browser through to the database.</td>
+      <td class="eg">A driver posts a Clayton to Caulfield ride, a passenger finds it and books a seat, and the dashboard then shows all three ways of making that trip.</td>
+      <td>Michael and Raneth, in Sprint 6, once the site is deployed.</td>
+      <td>Working through a written script by hand</td>
+    </tr>
+    <tr>
+      <td class="lvl">Acceptance</td>
+      <td>Whether the product actually does what we said it would.</td>
+      <td class="eg">We go through every requirement in the traceability matrix against what we agreed would count as passing, and then let real students use the prototype and tell us what they think.</td>
+      <td>The whole team, plus students who test it for us, at the end of Sprint 6.</td>
+      <td>The matrix as a checklist, and a Google Form survey</td>
+    </tr>
+  </tbody>
+</table>
+
+<footer>
+  <span>MonashGo · Green Ride-Sharing Platform · Master Test Plan v1.0</span>
+  <span>Based on the IEEE 829-2008 structure · Companion document: <i>docs/rtm.md</i></span>
+</footer>
+
+</div>
+</body>
+</html>

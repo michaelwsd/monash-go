@@ -1,0 +1,1741 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backend Handbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* ---- tokens: light is the base, complete on bare :root ---- */
+:root {
+  --paper:      #f6f8f8;
+  --surface:    #ffffff;
+  --surface-2:  #eef2f2;
+  --ink:        #101619;
+  --ink-2:      #3d4a4e;
+  --ink-3:      #6b7b80;
+  --rule:       #d8e0e0;
+  --rule-soft:  #e7eded;
+
+  --accent:     #0d6d68;   /* verified path, api/ layer */
+  --accent-ink: #0a5450;
+  --accent-bg:  #e2efee;
+  --reject:     #a3341f;   /* the 401 path */
+  --reject-bg:  #f7e8e4;
+  --ochre:      #8a6414;   /* core/ layer */
+  --ochre-bg:   #f4eddc;
+  --slate:      #5a6b70;   /* external */
+  --slate-bg:   #e8edee;
+
+  --measure: 68ch;
+  --radius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0b1013;
+    --surface:    #121a1d;
+    --surface-2:  #182226;
+    --ink:        #e4ecec;
+    --ink-2:      #adbdbf;
+    --ink-3:      #7e9094;
+    --rule:       #253134;
+    --rule-soft:  #1b2528;
+
+    --accent:     #58c3ba;
+    --accent-ink: #7ad6cd;
+    --accent-bg:  #102a29;
+    --reject:     #e08b74;
+    --reject-bg:  #2c1712;
+    --ochre:      #d3a842;
+    --ochre-bg:   #2a2213;
+    --slate:      #9aacb0;
+    --slate-bg:   #1a2326;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0b1013;
+  --surface:    #121a1d;
+  --surface-2:  #182226;
+  --ink:        #e4ecec;
+  --ink-2:      #adbdbf;
+  --ink-3:      #7e9094;
+  --rule:       #253134;
+  --rule-soft:  #1b2528;
+
+  --accent:     #58c3ba;
+  --accent-ink: #7ad6cd;
+  --accent-bg:  #102a29;
+  --reject:     #e08b74;
+  --reject-bg:  #2c1712;
+  --ochre:      #d3a842;
+  --ochre-bg:   #2a2213;
+  --slate:      #9aacb0;
+  --slate-bg:   #1a2326;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 16.5px;
+  line-height: 1.65;
+  font-feature-settings: "kern";
+}
+
+.wrap {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 3rem) 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3.25rem;
+}
+.measure { max-width: var(--measure); }
+
+/* ---- type ---- */
+h1, h2, h3 {
+  font-family: "IBM Plex Serif", ui-serif, Georgia, serif;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.2;
+}
+h1 { font-size: clamp(1.95rem, 4.2vw, 2.9rem); letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.03rem; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+code, .mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86em;
+}
+p code, li code, td code {
+  background: var(--surface-2);
+  padding: 0.1em 0.34em;
+  border-radius: var(--radius);
+}
+
+section { display: flex; flex-direction: column; gap: 1.15rem; }
+.lede { color: var(--ink-2); font-size: 1.06rem; }
+.stack { display: flex; flex-direction: column; gap: 0.85rem; }
+
+/* ---- masthead ---- */
+header.masthead {
+  display: flex; flex-direction: column; gap: 1.1rem;
+  padding-bottom: 2.25rem;
+  border-bottom: 2px solid var(--ink);
+}
+.route-line {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.95rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  color: var(--ink-2);
+}
+.verb {
+  background: var(--accent); color: var(--paper);
+  padding: 0.12rem 0.5rem; border-radius: var(--radius);
+  font-weight: 600; font-size: 0.8rem; letter-spacing: 0.04em;
+}
+
+/* ---- layer chips: the structural device. colour == architectural layer ---- */
+.chip {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.14rem 0.42rem; border-radius: var(--radius);
+  white-space: nowrap;
+}
+.chip.ext   { background: var(--slate-bg);  color: var(--slate); }
+.chip.api   { background: var(--accent-bg); color: var(--accent-ink); }
+.chip.core  { background: var(--ochre-bg);  color: var(--ochre); }
+.chip.err   { background: var(--reject-bg); color: var(--reject); }
+
+/* ---- the stepper ---- */
+ol.flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ol.flow > li { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0 1.1rem; }
+.gutter { display: flex; flex-direction: column; align-items: center; }
+.num {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem; font-weight: 600;
+  width: 1.7rem; height: 1.7rem; flex: none;
+  display: grid; place-items: center;
+  border: 1px solid var(--rule); border-radius: 50%;
+  background: var(--surface); color: var(--ink-2);
+}
+li.is-gate .num { border-color: var(--accent); color: var(--accent-ink); }
+.thread { flex: 1; width: 1px; background: var(--rule); margin: 0.4rem 0; min-height: 0.9rem; }
+ol.flow > li:last-child .thread { background: transparent; }
+.step {
+  padding-bottom: 1.55rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  min-width: 0;
+}
+.step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.7rem; }
+.step-head .name { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.95rem; }
+.where {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.76rem; color: var(--ink-3);
+}
+.step p { color: var(--ink-2); font-size: 0.965rem; max-width: 62ch; }
+/* inline flow, not flex: mixed text and inline elements would each become a
+   flex item and pick up the gap between every word run */
+.hands {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.79rem; color: var(--ink-3);
+  line-height: 1.6;
+}
+.hands b { color: var(--accent-ink); font-weight: 500; }
+.hands code { font-size: 1em; }
+
+/* ---- code ---- */
+pre {
+  margin: 0; padding: 0.85rem 1rem;
+  background: var(--surface); border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem; line-height: 1.62;
+  color: var(--ink);
+  tab-size: 4;
+}
+pre.plain { border-left-color: var(--rule); }
+pre .c { color: var(--ink-3); }
+pre .k { color: var(--accent-ink); }
+
+/* ---- tables ---- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule-soft); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 30rem; }
+th, td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+thead th {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500;
+  background: var(--surface-2);
+}
+tbody tr:last-child td { border-bottom: 0; }
+td.mono, th.mono { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
+
+/* ---- two-column split ---- */
+.split { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--rule-soft);
+  border-radius: var(--radius); padding: 1rem 1.15rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+.card.fail { border-top: 2px solid var(--reject); }
+.card.fail h3 { color: var(--reject); }
+.card p { font-size: 0.93rem; color: var(--ink-2); }
+
+/* ---- layer map ---- */
+.layers { display: flex; flex-direction: column; gap: 0; max-width: 46rem; }
+.layer {
+  display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr;
+  gap: 0.4rem 1.1rem; align-items: baseline;
+  padding: 0.72rem 0.9rem;
+  border: 1px solid var(--rule-soft); border-bottom: 0;
+  background: var(--surface);
+}
+.layer:last-child { border-bottom: 1px solid var(--rule-soft); }
+.layer .lname { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; font-weight: 600; }
+.layer .ldesc { font-size: 0.9rem; color: var(--ink-2); }
+.layer.l-api  { border-left: 3px solid var(--accent); }
+.layer.l-svc  { border-left: 3px solid var(--ink-3); }
+.layer.l-repo { border-left: 3px solid var(--ink-3); }
+.layer.l-core { border-left: 3px solid var(--ochre); }
+.dirnote {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem;
+  color: var(--ink-3); padding-left: 0.9rem;
+}
+
+/* ---- callout ---- */
+.note {
+  border-left: 2px solid var(--ochre);
+  background: var(--ochre-bg);
+  padding: 0.8rem 1.05rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.93rem;
+  color: var(--ink-2);
+}
+.note strong { color: var(--ink); }
+
+ul.tight { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.4rem; color: var(--ink-2); font-size: 0.965rem; }
+ul.tight li::marker { color: var(--ink-3); }
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding-top: 1.4rem;
+  font-size: 0.84rem; color: var(--ink-3);
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---- shared across the doc set ---- */
+.docnav {
+  display: flex; flex-wrap: wrap; gap: 0.55rem;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+.docnav a, .docnav span {
+  padding: 0.2rem 0.55rem; border-radius: var(--radius);
+  border: 1px solid var(--rule); color: var(--ink-3); text-decoration: none;
+}
+.docnav a:hover { border-color: var(--accent); color: var(--accent-ink); }
+.docnav .here { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* three-column map: what flows in, what lives here, what consumes it */
+.pipe { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); align-items: start; }
+.pipe-col { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.pipe-col > .eyebrow { margin-bottom: 0.15rem; }
+.node {
+  background: var(--surface); border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--rule); border-radius: var(--radius);
+  padding: 0.5rem 0.7rem; font-size: 0.86rem;
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+.node .n { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.82rem; word-break: break-word; }
+.node .d { color: var(--ink-3); font-size: 0.79rem; }
+.node.core { border-left-color: var(--ochre); }
+.node.api  { border-left-color: var(--accent); }
+.node.ext  { border-left-color: var(--slate); }
+
+/* key/value definition rows */
+.kv { display: flex; flex-direction: column; border: 1px solid var(--rule-soft); border-radius: var(--radius); overflow: hidden; }
+.kv > div {
+  display: grid; grid-template-columns: minmax(9rem, 14rem) 1fr; gap: 0.3rem 1.1rem;
+  padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--rule-soft); background: var(--surface);
+}
+.kv > div:last-child { border-bottom: 0; }
+.kv dt, .kv .k2 { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600; color: var(--accent-ink); word-break: break-word; }
+.kv dd, .kv .v2 { margin: 0; font-size: 0.92rem; color: var(--ink-2); }
+
+/* checklist */
+ul.check { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+/* the marker is absolutely positioned, NOT a grid/flex item: the li must stay a
+   normal block so its inline <code> runs flow inside the sentence */
+ul.check li {
+  position: relative; padding-left: 1.75rem;
+  font-size: 0.94rem; color: var(--ink-2); line-height: 1.6;
+}
+ul.check li::before {
+  content: "\2610"; position: absolute; left: 0; top: 0;
+  color: var(--ink-3); font-size: 1rem; line-height: inherit;
+}
+
+@media (max-width: 34rem) {
+  .kv > div { grid-template-columns: 1fr; }
+  .layer { grid-template-columns: 1fr; }
+  ol.flow > li { grid-template-columns: 1.9rem 1fr; gap: 0 0.8rem; }
+}
+
+
+/* ---- in / out block: what a function receives and what it returns ---- */
+.io {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--rule-soft); border-radius: var(--radius);
+  overflow: hidden; background: var(--surface);
+}
+.io-row {
+  display: grid; grid-template-columns: 3.1rem 1fr; gap: 0.9rem;
+  padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--rule-soft);
+  align-items: start;
+}
+.io-row:last-child { border-bottom: 0; }
+.io-tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.16rem 0; text-align: center; border-radius: var(--radius);
+}
+.io-tag.in   { background: var(--slate-bg);  color: var(--slate); }
+.io-tag.out  { background: var(--accent-bg); color: var(--accent-ink); }
+.io-tag.none { background: var(--reject-bg); color: var(--reject); }
+.io-val { font-size: 0.88rem; color: var(--ink-2); min-width: 0; overflow-x: auto; }
+.io-val > code { display: block; font-size: 0.78rem; color: var(--ink); word-break: break-all; }
+.io .fields { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.45rem; }
+.io .fields > div {
+  display: grid; grid-template-columns: minmax(6rem, auto) minmax(0, 1fr) auto;
+  gap: 0.3rem 0.9rem; align-items: baseline;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.76rem;
+}
+.io .fields .f { color: var(--accent-ink); font-weight: 500; }
+.io .fields .v { color: var(--ink); word-break: break-all; }
+.io .fields .cmt { color: var(--ink-3); font-size: 0.72rem; text-align: right; }
+@media (max-width: 42rem) {
+  .io .fields > div { grid-template-columns: 1fr; gap: 0.05rem; }
+  .io .fields .cmt { text-align: left; }
+}
+
+/* ---- resolution order: what runs before, during and after the body ---- */
+.seq {
+  border: 1px solid var(--rule-soft); border-radius: var(--radius);
+  overflow: hidden; background: var(--surface);
+}
+.seq-band { padding: 0.4rem 0.85rem; background: var(--surface-2); border-bottom: 1px solid var(--rule-soft); }
+.band-tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.band-tag.before { color: var(--accent-ink); }
+.band-tag.body   { color: var(--ink); }
+.band-tag.after  { color: var(--ochre); }
+.seq-row {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(9rem, auto) minmax(4.5rem, auto) minmax(0, 1fr);
+  gap: 0.35rem 0.85rem; align-items: baseline;
+  padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--rule-soft);
+}
+.seq-row:last-child { border-bottom: 0; }
+.seq-row.is-body { background: var(--accent-bg); }
+.s-n {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; font-weight: 600;
+  color: var(--ink-3);
+}
+.s-call { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600; color: var(--ink); word-break: break-word; }
+.s-out  { font-family: "IBM Plex Mono", monospace; font-size: 0.79rem; color: var(--accent-ink); }
+.s-guard { font-size: 0.82rem; color: var(--ink-3); }
+.s-guard b { color: var(--reject); font-weight: 600; }
+@media (max-width: 44rem) {
+  .seq-row { grid-template-columns: 1.6rem 1fr; }
+  .seq-row .s-out, .seq-row .s-guard { grid-column: 2; }
+}
+
+.rule-line-list { display: flex; flex-direction: column; }
+.rule-line {
+  display: flex; gap: 0.7rem; align-items: baseline;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--rule-soft);
+  font-size: 0.93rem; color: var(--ink-2);
+}
+.rule-line:last-child { border-bottom: 0; }
+.rule-line b { color: var(--ink); font-weight: 600; }
+.rule-line .tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; font-weight: 600;
+  letter-spacing: 0.08em; padding: 0.14rem 0.42rem; border-radius: var(--radius);
+  white-space: nowrap; flex: none;
+}
+.tag.yes { background: var(--accent-bg); color: var(--accent-ink); }
+
+/* ---- annotated reference rows: a thing, and what it means ---- */
+.annot { border: 1px solid var(--rule-soft); border-radius: var(--radius); overflow: hidden; }
+.annot-row {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 0.3rem 1rem; padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--rule-soft); background: var(--surface); align-items: baseline;
+}
+.annot-row:last-child { border-bottom: 0; }
+.annot-row .o {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
+  color: var(--ink); white-space: pre-wrap; word-break: break-word;
+}
+.annot-row .m { font-size: 0.85rem; color: var(--ink-3); }
+.annot-row.head { background: var(--surface-2); }
+.annot-row.head .o, .annot-row.head .m {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.66rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+@media (max-width: 44rem) { .annot-row { grid-template-columns: 1fr; } }
+
+/* ---- paged document ---- */
+.pagenav {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  padding: 0.7rem 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; letter-spacing: 0.03em;
+}
+.pagenav a {
+  display: flex; align-items: baseline; gap: 0.5rem;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius);
+  border: 1px solid var(--rule); color: var(--ink-3); text-decoration: none;
+}
+.pagenav a:hover { border-color: var(--accent); color: var(--accent-ink); }
+.pagenav a .pn { color: var(--ink-3); font-weight: 600; }
+.pagenav a.is-active {
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
+}
+.pagenav a.is-active .pn { color: var(--accent); }
+
+/* no JS: every page stays visible and the document simply scrolls */
+.doc-page { display: flex; flex-direction: column; gap: 3.25rem; }
+html.js .doc-page { display: none; }
+html.js .doc-page.is-active { display: flex; }
+
+.part {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding-top: 1.5rem;
+}
+.part .pnum {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-ink);
+  font-weight: 600;
+}
+.part h2 { font-size: clamp(1.6rem, 3.2vw, 2.1rem); letter-spacing: -0.012em; }
+.part .lede { max-width: var(--measure); }
+section h2 { font-size: clamp(1.24rem, 2.2vw, 1.5rem); }
+
+.pagers {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  padding-top: 2rem; border-top: 1px solid var(--rule);
+}
+.pagers .pager {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding: 0.8rem 1rem; border: 1px solid var(--rule-soft);
+  border-radius: var(--radius); background: var(--surface);
+  text-decoration: none; min-width: 0;
+}
+.pagers .pager:hover { border-color: var(--accent); }
+.pagers .pager.prev { text-align: left; }
+.pagers .pager.next { text-align: right; align-items: flex-end; }
+.pagers .dir {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+.pagers .pager .t { font-size: 0.92rem; color: var(--ink); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">MonashGO &middot; backend</div>
+    <h1>Backend handbook</h1>
+    <p class="lede measure">Three things worth writing down while they are still fresh: how an
+      authenticated request actually travels through the stack, what <code>deps.py</code> is doing at
+      the centre of it, and the order to build the next feature in so the layers stay honest.</p>
+    <div class="route-line">
+      <span class="verb">worked example</span>
+      <span>POST /api/v1/users/sync</span>
+      <span style="color:var(--ink-3)">&mdash; the first endpoint that requires a login</span>
+    </div>
+  </header>
+
+  <nav class="pagenav" aria-label="Sections">
+    <a href="#part-1" data-page="part-1"><span class="pn">I</span>request lifecycle</a>
+    <a href="#part-2" data-page="part-2"><span class="pn">II</span>deps.py</a>
+    <a href="#part-3" data-page="part-3"><span class="pn">III</span>adding a feature</a>
+    <a href="#part-4" data-page="part-4"><span class="pn">IV</span>errors</a>
+  </nav>
+
+  <article class="doc-page" id="part-1">
+    <div class="part">
+      <div class="pnum">Part one</div>
+      <h2>How an authenticated request wires together</h2>
+      <p class="lede">A token arrives as a string in a header and reaches your route body as a typed <code>ClerkClaims</code> object. Nothing in the codebase calls the route to make that happen. This traces every hand-off in between, and names the file and line where each one lives.</p>
+    </div>
+
+  <!-- ============ 1. the layers ============ -->
+  <section>
+    <div class="eyebrow">Orientation</div>
+    <h2>Four layers, one direction</h2>
+    <p class="measure">Every file below belongs to exactly one layer, and a layer may only import
+      from the layers beneath it. That single rule is what the whole chain is arranged to protect:
+      HTTP concepts stop at the top, and the bottom layer never learns that a web request exists.</p>
+
+    <div class="layers">
+      <div class="layer l-api">
+        <span class="lname">api/</span>
+        <span class="ldesc">Parse, validate, call a service, shape a response. Where <code>Depends</code> is allowed to appear.</span>
+      </div>
+      <div class="layer l-svc">
+        <span class="lname">services/</span>
+        <span class="ldesc">Business logic. Raises domain errors, never <code>HTTPException</code>.</span>
+      </div>
+      <div class="layer l-repo">
+        <span class="lname">repositories/</span>
+        <span class="ldesc">Every Supabase call. Returns domain models, never raw dicts.</span>
+      </div>
+      <div class="layer l-core">
+        <span class="lname">core/</span>
+        <span class="ldesc">Pure functions and config. Zero I/O, and no idea what a request is.</span>
+      </div>
+    </div>
+    <div class="dirnote">imports flow downward only &darr;</div>
+
+    <div class="note measure">
+      <strong>Why the token logic is split across two layers.</strong>
+      <code>core/security.py</code> takes a token <em>string</em> and returns claims. It never touches
+      a <code>Request</code>, which is what lets <code>tests/unit/test_security.py</code> hand it a
+      self-signed token with no HTTP anywhere. <code>api/deps.py</code> is the thin adapter that knows
+      how to pull that string out of a real request.
+    </div>
+  </section>
+  <!-- ============ 2. the lifecycle ============ -->
+  <section>
+    <div class="eyebrow">The happy path</div>
+    <h2>One request, seven hand-offs</h2>
+    <p class="measure">Steps 2 to 6 are all resolved by FastAPI <em>before</em> your route body runs.
+      Step 7 is the first ordinary Python call you wrote yourself.</p>
+
+    <ol class="flow">
+
+      <li>
+        <div class="gutter"><span class="num">1</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Clerk signs the token</span>
+            <span class="chip ext">external</span>
+          </div>
+          <p>The user signs in with Google. Clerk mints a JWT and signs it with its
+            <strong>private</strong> key, which never leaves Clerk. The frontend attaches it to
+            every call.</p>
+          <pre class="plain">Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzJhYmMxMjMi...</pre>
+          <div class="hands">hands on &rarr; <b>an HTTP request</b></div>
+        </div>
+      </li>
+
+      <li>
+        <div class="gutter"><span class="num">2</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">bearer_scheme</span>
+            <span class="where">app/api/deps.py:35</span>
+            <span class="chip api">api/</span>
+          </div>
+          <p>An <code>HTTPBearer</code> instance built once at import time. It is not a value that
+            comes from the request &mdash; it is the callable that <em>reads</em> one.</p>
+          <pre>bearer_scheme = HTTPBearer(auto_error=<span class="k">False</span>)</pre>
+
+          <p>It is a dependency like any other, not a special case: <code>HTTPBearer.__call__</code>
+            declares a <code>Request</code> parameter, so FastAPI injects the request into it the same
+            way it injects <code>claims</code> into your route. It then splits the header on the
+            space, checks the scheme reads <code>Bearer</code>, and wraps the rest.</p>
+
+          <div class="io">
+            <div class="io-row">
+              <span class="io-tag in">in</span>
+              <div class="io-val"><code>Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzJhYmMxMjMifQ...</code></div>
+            </div>
+            <div class="io-row">
+              <span class="io-tag out">out</span>
+              <div class="io-val">
+                <code>HTTPAuthorizationCredentials</code>
+                <div class="fields">
+                  <div><span class="f">.scheme</span><span class="v">"Bearer"</span><span class="cmt">the part it validated</span></div>
+                  <div><span class="f">.credentials</span><span class="v">"eyJhbGciOiJSUzI1NiJ9..."</span><span class="cmt">the token, what step 4 verifies</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="io-row">
+              <span class="io-tag none">or</span>
+              <div class="io-val"><code>None</code> &mdash; header absent, or present but not
+                <code>Bearer &lt;something&gt;</code></div>
+            </div>
+          </div>
+
+          <p>That <code>None</code> is the whole point of <code>auto_error=False</code>. The default
+            makes <code>HTTPBearer</code> raise its own <code>HTTPException</code>, producing a
+            response your error handler never sees. Switched off, it returns <code>None</code> and the
+            decision of what a missing header means stays yours &mdash; which is what step 3 acts on.</p>
+
+          <div class="note">
+            <strong>It does not run on every request.</strong> Only routes that depend on it, directly
+            or through <code>CurrentClaims</code> and <code>CurrentUser</code>, ever call it.
+            <code>/health</code> takes only <code>SettingsDep</code>, so no header is read and no token
+            is verified there at all.
+          </div>
+
+          <div class="hands">hands on &rarr; <b>HTTPAuthorizationCredentials | None</b></div>
+        </div>
+      </li>
+
+      <li class="is-gate">
+        <div class="gutter"><span class="num">3</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">get_current_claims</span>
+            <span class="where">app/api/deps.py:39</span>
+            <span class="chip api">api/</span>
+          </div>
+          <p>Catches the <code>None</code> that step 2 can now produce, then delegates the actual
+            cryptography downward. Note its own parameter is annotated the same way &mdash; that is
+            how the chain links.</p>
+          <pre><span class="k">def</span> get_current_claims(
+    credentials: Annotated[HTTPAuthorizationCredentials | <span class="k">None</span>, Depends(bearer_scheme)],
+) -&gt; ClerkClaims:
+    <span class="k">if</span> credentials <span class="k">is None</span>:
+        <span class="k">raise</span> InvalidCredentialsError(<span class="c">"missing or malformed authorization header"</span>)
+    <span class="k">return</span> verify_clerk_token(credentials.credentials)</pre>
+          <div class="hands">hands on &rarr; <b>ClerkClaims</b></div>
+        </div>
+      </li>
+
+      <li class="is-gate">
+        <div class="gutter"><span class="num">4</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">verify_clerk_token</span>
+            <span class="where">app/core/security.py:35</span>
+            <span class="chip core">core/</span>
+          </div>
+          <p>The real gate. Four independent checks, any one of which fails the whole request.
+            Because RS256 is asymmetric, your server holds only the <strong>public</strong> key: it
+            can verify any token but forge none, and it never calls Clerk over the network to do it.</p>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr><th>Check</th><th>Comes from</th><th>Catches</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="mono">signature</td><td class="mono">clerk_pem_public_key</td><td>forged or tampered payload</td></tr>
+                <tr><td class="mono">exp</td><td class="mono">the token</td><td>a stale token replayed later</td></tr>
+                <tr><td class="mono">issuer</td><td class="mono">clerk_issuer</td><td>a valid token from someone else's Clerk app</td></tr>
+                <tr><td class="mono">require=[&hellip;]</td><td class="mono">the token</td><td>a Clerk template that was never configured</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hands">hands on &rarr; <b>dict</b></div>
+        </div>
+      </li>
+
+      <li>
+        <div class="gutter"><span class="num">5</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">ClerkClaims</span>
+            <span class="where">app/core/security.py:50</span>
+            <span class="chip core">core/</span>
+          </div>
+          <p>A second <code>try</code> block, for a reason worth stating plainly:
+            <code>require</code> only proves a claim <em>exists</em>. <code>jwt.decode</code> returns
+            a plain dict, so <code>claims["email"]</code> could be the number <code>42</code> and
+            still pass step 4. This is where the payload becomes typed.</p>
+          <p>Both failures raise the same <code>InvalidCredentialsError</code> with the same message.
+            That is intentional &mdash; an error that distinguishes "expired" from "bad signature"
+            tells an attacker which half to keep working on.</p>
+          <div class="hands">hands on &rarr; <b>ClerkClaims(clerk_id, email, full_name)</b></div>
+        </div>
+      </li>
+
+      <li>
+        <div class="gutter"><span class="num">6</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">sync_user</span>
+            <span class="where">app/api/routes/users.py:11</span>
+            <span class="chip api">api/</span>
+          </div>
+          <p>Only now does the body run. Both parameters were filled in by FastAPI, decided by the
+            <em>annotation</em> and never by the parameter name.</p>
+          <pre><span class="k">def</span> sync_user(claims: CurrentClaims, db: SupabaseDep) -&gt; User:</pre>
+          <div class="hands">hands on &rarr; <b>a real ClerkClaims and a real Client</b></div>
+        </div>
+      </li>
+
+      <li>
+        <div class="gutter"><span class="num">7</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">user_service.sync</span>
+            <span class="where">app/services/user_service.py:7</span>
+            <span class="chip ext">plain call</span>
+          </div>
+          <p>An ordinary function call you wrote by hand, with a <code>Client</code> already in your
+            hand. No <code>Depends</code>, no FastAPI, no request. That is precisely why
+            <code>tests/unit/test_user_service.py</code> can drive it with fake repositories and a
+            <code>NO_DB</code> placeholder.</p>
+          <div class="hands">returns &rarr; <b>User</b>, serialised through <code>UserResponse</code></div>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+  <!-- ============ 3. how params get filled ============ -->
+  <section>
+    <div class="eyebrow">The mechanism</div>
+    <h2>Why the parameters fill themselves</h2>
+    <p class="measure">Two phases, and conflating them is the usual source of confusion.</p>
+
+    <div class="split">
+      <div class="card">
+        <h3>At startup, once</h3>
+        <p>The decorator registers <code>sync_user</code>. FastAPI inspects its signature and builds
+          a plan: to call this, first produce a <code>ClerkClaims</code> from
+          <code>get_current_claims</code> and a <code>Client</code> from <code>get_supabase</code>.
+          It recurses, because <code>get_current_claims</code> has an annotated parameter of its own.
+          The result is a dependency tree, computed once.</p>
+      </div>
+      <div class="card">
+        <h3>Per request</h3>
+        <p>FastAPI walks that tree bottom-up, calling each function and caching the result
+          <em>per request</em> &mdash; ask for both <code>CurrentUser</code> and
+          <code>CurrentClaims</code> in one route and the token is still verified only once. Then it
+          calls your function with the finished values as keyword arguments.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:0.5rem">The order for one real request</h3>
+    <p class="measure">Every dependency resolves before the body is entered, and
+      <code>response_model</code> applies after it returns. <code>POST /users/sync</code> end to
+      end:</p>
+
+    <div class="seq">
+      <div class="seq-band"><span class="band-tag before">before the body</span></div>
+      <div class="seq-row">
+        <span class="s-n">1</span>
+        <span class="s-call">get_current_claims</span>
+        <span class="s-out">&rarr; claims</span>
+        <span class="s-guard">raises &rarr; <b>401</b>, nothing below runs</span>
+      </div>
+      <div class="seq-row">
+        <span class="s-n">2</span>
+        <span class="s-call">get_supabase</span>
+        <span class="s-out">&rarr; db</span>
+        <span class="s-guard">cached, so this is free after the first request</span>
+      </div>
+
+      <div class="seq-band"><span class="band-tag body">the body</span></div>
+      <div class="seq-row is-body">
+        <span class="s-n">3</span>
+        <span class="s-call">sync_user(claims, db)</span>
+        <span class="s-out">&rarr; User</span>
+        <span class="s-guard">both arguments already in hand</span>
+      </div>
+
+      <div class="seq-band"><span class="band-tag after">after the body</span></div>
+      <div class="seq-row">
+        <span class="s-n">4</span>
+        <span class="s-call">UserResponse</span>
+        <span class="s-out">&rarr; JSON</span>
+        <span class="s-guard">narrows the result, <code>clerk_id</code> dropped here</span>
+      </div>
+    </div>
+
+    <p class="measure">Step 4 running <em>after</em> step 3 is what lets the function return the full
+      internal <code>User</code> while <code>clerk_id</code> still never reaches the client. The route
+      does not have to remember to strip it.</p>
+
+    <h3 style="margin-top:0.5rem">What decides where a parameter comes from</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Annotation</th><th>FastAPI reads it as</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">Annotated[X, Depends(f)]</td><td>call <code>f</code> and pass the result</td></tr>
+          <tr><td class="mono">a Pydantic model</td><td>the JSON request body</td></tr>
+          <tr><td class="mono">str / int matching a {} in the path</td><td>the path</td></tr>
+          <tr><td class="mono">str / int not in the path</td><td>the query string</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">So <code>claims</code> and <code>db</code> arrive by dependency purely because
+      <code>CurrentClaims</code> and <code>SupabaseDep</code> are <code>Annotated[&hellip;,
+      Depends(&hellip;)]</code> aliases. Rename them to <code>c</code> and <code>x</code> and nothing
+      changes. Strip the annotations and FastAPI decides they are query parameters and rejects the
+      request as missing.</p>
+
+    <div class="note measure">
+      <strong>The aliases are the vocabulary, not the machinery.</strong>
+      <code>SettingsDep</code>, <code>SupabaseDep</code>, <code>CurrentUser</code> and
+      <code>CurrentClaims</code> in <code>deps.py</code> exist so a route can state what it needs in
+      one word. <code>CurrentUser</code> is just the id string; <code>CurrentClaims</code> is the
+      whole object. <code>sync_user</code> needs the latter because it writes email and full name
+      into the row.
+    </div>
+  </section>
+  <!-- ============ 4. failure ============ -->
+  <section>
+    <div class="eyebrow">The unhappy paths</div>
+    <h2>Every rejection exits the same door</h2>
+    <p class="measure">Auth can fail in several distinct ways, and all of them produce one response
+      shape from one handler. Nothing in the chain raises <code>HTTPException</code>.</p>
+
+    <div class="split">
+      <div class="card fail">
+        <h3>No header at all</h3>
+        <p><code>bearer_scheme</code> returns <code>None</code>, and
+          <code>get_current_claims</code> raises at <code>deps.py:44</code>.</p>
+      </div>
+      <div class="card fail">
+        <h3>Expired, forged, or wrong issuer</h3>
+        <p><code>jwt.decode</code> raises <code>PyJWTError</code>, caught and re-raised at
+          <code>security.py:47</code>.</p>
+      </div>
+      <div class="card fail">
+        <h3>Claims present but wrong type</h3>
+        <p>Pydantic raises <code>ValidationError</code>, caught and re-raised at
+          <code>security.py:53</code>.</p>
+      </div>
+    </div>
+
+    <pre class="plain">InvalidCredentialsError(DomainError)      <span class="c"># errors.py:43, status_code = 401</span>
+        &darr;  escapes the dependency, never reaching the route
+domain_error_handler                      <span class="c"># handlers.py:16</span>
+        &darr;
+{"detail": "invalid or expired token"}    <span class="c"># 401</span></pre>
+
+    <p class="measure">The route body is never entered. <code>tests/integration/test_current_user.py</code>
+      asserts exactly this, and it is the assertion that matters most in the file:</p>
+    <pre>assert response.status_code == 401
+assert reached == []   <span class="c"># the body never ran</span></pre>
+  </section>
+  <!-- ============ 5. trust root ============ -->
+  <section>
+    <div class="eyebrow">Configuration</div>
+    <h2>Where the trust actually lives</h2>
+    <p class="measure">The entire chain reduces to two strings in <code>.env</code>, read through
+      the cached <code>get_settings()</code> in <code>core/config.py</code>.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Setting</th><th>Role</th><th>If it is wrong</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">CLERK_PEM_PUBLIC_KEY</td>
+            <td>verifies every signature</td>
+            <td>every token is rejected, or worse, tokens from another issuer are accepted</td>
+          </tr>
+          <tr>
+            <td class="mono">CLERK_ISSUER</td>
+            <td>pins which Clerk app is trusted</td>
+            <td>a valid token from an unrelated Clerk instance passes</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">Because they are injected as a dependency rather than read from a module-level
+      global, <code>tests/conftest.py</code> can replace the whole settings object in one line with
+      <code>app.dependency_overrides[get_settings] = fake_settings</code>. In production that
+      override map is empty and the real functions run on every request.</p>
+  </section>
+  <!-- ============ 6. verify ============ -->
+  <section>
+    <div class="eyebrow">Checking it yourself</div>
+    <h2>Prove the chain, cheapest first</h2>
+    <pre class="plain"><span class="c"># 1. the pure layer, no HTTP: self-signed tokens against the real verifier</span>
+uv run pytest tests/unit/test_security.py -v
+
+<span class="c"># 2. the dependency, end to end on a throwaway app</span>
+uv run pytest tests/integration/test_current_user.py -v
+
+<span class="c"># 3. the route is actually mounted</span>
+uv run python -c "from app.main import app; print([r.path for r in app.routes])"
+
+<span class="c"># 4. a real rejection, no token supplied</span>
+uv run uvicorn app.main:app --reload
+curl -i -X POST localhost:8000/api/v1/users/sync    <span class="c"># expect 401</span></pre>
+    <ul class="tight measure">
+      <li>Step 2 passing while step 4 returns <code>200</code> means a dependency is missing from the route.</li>
+      <li>A <code>422</code> instead of <code>401</code> means an annotation was dropped and FastAPI read the parameter as a query string.</li>
+      <li><code>{"detail":"Not authenticated"}</code> rather than your own message means <code>auto_error</code> got left at its default.</li>
+    </ul>
+  </section>
+    <div class="pagers"><span></span><a class="pager next" href="#part-2"><span class="dir">next &rarr;</span><span class="t">The dependency vocabulary</span></a></div>
+  </article>
+  <article class="doc-page" id="part-2">
+    <div class="part">
+      <div class="pnum">Part two</div>
+      <h2>The dependency vocabulary</h2>
+      <p class="lede"><code>app/api/deps.py</code> is fifty-eight lines and imports from four other modules, yet it is the hinge the whole backend turns on. It is where a route stops describing <em>how</em> to obtain something and starts simply naming <em>what</em> it needs.</p>
+    </div>
+
+  <!-- ============ the map ============ -->
+  <section>
+    <div class="eyebrow">Orientation</div>
+    <h2>What flows in, what comes out</h2>
+    <p class="measure">Read this left to right. The left column is machinery that knows nothing about
+      HTTP. The right column is code that cannot function without it. <code>deps.py</code> is the
+      only thing that touches both.</p>
+
+    <div class="pipe">
+      <div class="pipe-col">
+        <div class="eyebrow">Imports from</div>
+        <div class="node core"><span class="n">core/config.py</span><span class="d">get_settings, Settings</span></div>
+        <div class="node core"><span class="n">core/security.py</span><span class="d">verify_clerk_token, ClerkClaims</span></div>
+        <div class="node core"><span class="n">db/client.py</span><span class="d">get_supabase</span></div>
+        <div class="node core"><span class="n">exceptions/errors.py</span><span class="d">InvalidCredentialsError</span></div>
+        <div class="node ext"><span class="n">fastapi.security</span><span class="d">HTTPBearer</span></div>
+      </div>
+
+      <div class="pipe-col">
+        <div class="eyebrow">Defines</div>
+        <div class="node api"><span class="n">SettingsDep</span><span class="d">&rarr; Settings</span></div>
+        <div class="node api"><span class="n">SupabaseDep</span><span class="d">&rarr; Client</span></div>
+        <div class="node api"><span class="n">CurrentClaims</span><span class="d">&rarr; ClerkClaims</span></div>
+        <div class="node api"><span class="n">CurrentUser</span><span class="d">&rarr; str</span></div>
+        <div class="node api"><span class="n">bearer_scheme</span><span class="d">private, feeds the two above</span></div>
+      </div>
+
+      <div class="pipe-col">
+        <div class="eyebrow">Consumed by</div>
+        <div class="node"><span class="n">main.py:38</span><span class="d">health(settings: SettingsDep)</span></div>
+        <div class="node"><span class="n">routes/users.py:11</span><span class="d">sync_user(claims, db)</span></div>
+        <div class="node"><span class="n">test_current_user.py:38</span><span class="d">route(user: CurrentUser)</span></div>
+        <div class="node ext"><span class="n">every future route</span><span class="d">rides, bookings, compare, rewards, pet</span></div>
+      </div>
+    </div>
+
+    <div class="note measure">
+      <strong>Why it sits in <code>api/</code> and not beside the things it wraps.</strong>
+      <code>Depends</code> is a FastAPI concept, and the architecture forbids FastAPI from appearing
+      in <code>core/</code> or <code>db/</code>. Putting <code>SupabaseDep</code> next to
+      <code>get_supabase</code> would drag a web framework into the database layer. Keeping it here
+      means <code>db/client.py</code> stays importable from a seed script with no web server in sight.
+    </div>
+  </section>
+  <!-- ============ anatomy ============ -->
+  <section>
+    <div class="eyebrow">Anatomy</div>
+    <h2>One line, two audiences</h2>
+    <p class="measure">Every alias in the file has the same shape, and each half is read by a
+      different reader.</p>
+
+    <pre>SupabaseDep = Annotated[Client, Depends(get_supabase)]
+<span class="c">                        ▲       ▲</span>
+<span class="c">                        │       └─ FastAPI reads this: "call get_supabase"</span>
+<span class="c">                        └───────── mypy reads this: "the value is a Client"</span></pre>
+
+    <p class="measure">The two halves are independent, and nothing enforces that they agree. Write
+      <code>Annotated[str, Depends(get_supabase)]</code> and mypy will happily let you call
+      <code>.upper()</code> on a Supabase client, right up until it explodes at runtime. Keeping them
+      honest is on you.</p>
+
+    <div class="split">
+      <div class="card">
+        <h3>What mypy does with it</h3>
+        <p>Treats the parameter as that type and nothing else. This is why
+          <code>sync_user</code> can pass <code>claims.email</code> to a function expecting
+          <code>str</code> and get checked properly.</p>
+      </div>
+      <div class="card">
+        <h3>What FastAPI does with it</h3>
+        <p>Ignores the type entirely and looks only for a <code>Depends</code> marker in the
+          metadata. Finds one, calls it, passes the result. Finds none, decides the parameter is a
+          query string.</p>
+      </div>
+    </div>
+  </section>
+  <!-- ============ the four ============ -->
+  <section>
+    <div class="eyebrow">Reference</div>
+    <h2>The four names, and when to reach for each</h2>
+
+    <div class="kv">
+      <div>
+        <span class="k2">SettingsDep</span>
+        <span class="v2">Configuration. Backed by <code>@lru_cache</code>, so it is built once per
+          process. Reach for it when a route needs an environment value &mdash; a feature flag, the
+          current environment name. Today only <code>/health</code> uses it.</span>
+      </div>
+      <div>
+        <span class="k2">SupabaseDep</span>
+        <span class="v2">The database client. Also <code>@lru_cache</code>d, deliberately: the client
+          owns a connection pool, and one per request would exhaust connections and pay for a fresh
+          TLS handshake every call. Every route that reaches a repository takes this.</span>
+      </div>
+      <div>
+        <span class="k2">CurrentClaims</span>
+        <span class="v2">The full verified payload: <code>clerk_id</code>, <code>email</code>,
+          <code>full_name</code>. Take this when you need more than identity &mdash;
+          <code>sync_user</code> does, because it writes email and name into the row.</span>
+      </div>
+      <div>
+        <span class="k2">CurrentUser</span>
+        <span class="v2">Just the Clerk id as a <code>str</code>. Take this for the common case:
+          proving who is calling so you can filter or check ownership. A route that takes this
+          cannot accidentally leak the caller's email into a response.</span>
+      </div>
+    </div>
+
+    <p class="measure">Choosing the narrower of the two is not a style preference. A route's
+      signature is a claim about what it touches, and <code>CurrentUser</code> is the stronger
+      claim.</p>
+  </section>
+  <!-- ============ chaining ============ -->
+  <section>
+    <div class="eyebrow">Composition</div>
+    <h2>Dependencies that depend on dependencies</h2>
+    <p class="measure">The four names are not independent. Two of them are built out of a third,
+      which is built out of a fourth, and FastAPI resolves the whole chain before your route sees
+      anything.</p>
+
+    <pre>bearer_scheme                 <span class="c"># deps.py:35  reads the Authorization header</span>
+    &darr;
+get_current_claims            <span class="c"># deps.py:39  None-check, then verify</span>
+    &darr;                          <span class="c">#             ↳ core/security.py does the crypto</span>
+    ├── CurrentClaims         <span class="c"># deps.py:58  exposed directly</span>
+    &darr;
+get_current_user_id           <span class="c"># deps.py:48  discards everything but the id</span>
+    &darr;
+    └── CurrentUser           <span class="c"># deps.py:56</span></pre>
+
+    <p class="measure">Because <code>get_current_user_id</code> is itself annotated with
+      <code>Depends(get_current_claims)</code>, the chain builds by the same mechanism a route uses.
+      There is no special case for "nested" dependencies &mdash; it is annotations all the way down.</p>
+
+    <div class="note measure">
+      <strong>Each function runs at most once per request.</strong> A route taking both
+      <code>CurrentUser</code> and <code>CurrentClaims</code> triggers <code>get_current_claims</code>
+      once, not twice, so the RS256 signature is verified a single time. FastAPI caches by function
+      within the request. This is separate from <code>@lru_cache</code>, which caches
+      <em>across</em> requests for the whole process life.
+    </div>
+  </section>
+  <!-- ============ two caches ============ -->
+  <section>
+    <div class="eyebrow">Easily confused</div>
+    <h2>Two caches, different jobs</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>@lru_cache</th><th>FastAPI's per-request cache</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">lives</td><td>process lifetime</td><td>one request</td></tr>
+          <tr><td class="mono">applies to</td><td class="mono">get_settings, get_supabase</td><td>every dependency in the tree</td></tr>
+          <tr><td class="mono">why</td><td>the object is expensive and immutable</td><td>the same value must not be recomputed mid-request</td></tr>
+          <tr><td class="mono">must not be used for</td><td class="mono">get_current_claims &mdash; every caller sends a different token</td><td>&mdash;</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">Putting <code>@lru_cache</code> on <code>get_current_claims</code> would be a
+      critical security bug: the first user to sign in would have their identity served to everyone
+      afterwards. The absence of that decorator is load-bearing.</p>
+  </section>
+  <!-- ============ the test seam ============ -->
+  <section>
+    <div class="eyebrow">The payoff</div>
+    <h2>Why this shape earns its keep in tests</h2>
+    <p class="measure">Going through <code>Depends</code> creates a seam. FastAPI checks an override
+      map before calling any dependency, and that map is writable from a test.</p>
+
+    <pre>app.dependency_overrides[get_settings] = fake_settings   <span class="c"># conftest.py:40</span></pre>
+
+    <p class="measure">One line replaces configuration for the entire app. Compare it with
+      <code>get_supabase</code>'s internals, which are <em>not</em> injected &mdash;
+      <code>create_client</code> is called directly, so
+      <code>tests/unit/test_db_client.py</code> has to reach in and monkeypatch a module attribute
+      instead:</p>
+
+    <pre class="plain">monkeypatch.setattr(db_client, "create_client", fake_create_client)
+monkeypatch.setattr(db_client, "get_settings", fake_settings)</pre>
+
+    <p class="measure">Both work. The first is a supported seam; the second knows the internals of
+      the module it patches and breaks if that module is refactored. That difference is the argument
+      for dependency injection in one screen.</p>
+
+    <div class="note measure">
+      <strong>In production the override map is empty.</strong> <code>Depends</code> is not a
+      testing device that happens to work at runtime &mdash; it is the runtime mechanism, and tests
+      borrow it. Every request really does call <code>get_settings()</code> and
+      <code>get_supabase()</code>; <code>@lru_cache</code> is what makes that free.
+    </div>
+  </section>
+  <!-- ============ where it breaks ============ -->
+  <section>
+    <div class="eyebrow">Failure modes</div>
+    <h2>What it looks like when it is wired wrong</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Symptom</th><th>Cause</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>422</code> with "field required" naming your parameter</td>
+            <td>The annotation was dropped, so FastAPI read it as a query parameter.</td>
+          </tr>
+          <tr>
+            <td><code>{"detail":"Not authenticated"}</code> instead of your own message</td>
+            <td><code>auto_error</code> left at its default, so <code>HTTPBearer</code> raised before your code ran.</td>
+          </tr>
+          <tr>
+            <td>A service receives a <code>Depends</code> object rather than a client</td>
+            <td>An alias like <code>SupabaseDep</code> used in a service signature. Only the outermost function gets its arguments filled in.</td>
+          </tr>
+          <tr>
+            <td>A test's override is ignored</td>
+            <td>The route depends on a different function than the one used as the override key. The key is the function object, not its name.</td>
+          </tr>
+          <tr>
+            <td>Two users see each other's data</td>
+            <td>A per-request dependency was given <code>@lru_cache</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <!-- ============ adding one ============ -->
+  <section>
+    <div class="eyebrow">Extending it</div>
+    <h2>Adding a fifth name</h2>
+    <p class="measure">Most sprints will not need one. The file should grow slowly &mdash; a new
+      entry earns its place only when more than one route needs the same prepared value. The likely
+      next candidate is a dependency that turns a <code>clerk_id</code> into the local
+      <code>users</code> row, since almost every endpoint after this one needs
+      <code>users.id</code> rather than the Clerk id.</p>
+    <ul class="check">
+      <li>Write the producing function. If it does I/O or holds business rules, it belongs in a lower layer and <code>deps.py</code> only wraps it.</li>
+      <li>Raise a <code>DomainError</code> subclass on failure, never <code>HTTPException</code>, so it exits through the one handler.</li>
+      <li>Bind the alias with <code>Annotated[TheRealType, Depends(the_function)]</code> and check the two halves agree.</li>
+      <li>Decide caching deliberately: <code>@lru_cache</code> only if the value is identical for every caller for the life of the process.</li>
+      <li>Name it for what it produces, not how &mdash; <code>CurrentUser</code>, not <code>UserFromToken</code>.</li>
+    </ul>
+    <p class="measure">The mechanics of slotting that into a whole feature are on the
+      <a href="#part-3">adding a feature</a> page.</p>
+  </section>
+    <div class="pagers"><a class="pager prev" href="#part-1"><span class="dir">&larr; previous</span><span class="t">How an authenticated request wires together</span></a><a class="pager next" href="#part-3"><span class="dir">next &rarr;</span><span class="t">Adding a feature, bottom-up</span></a></div>
+  </article>
+  <article class="doc-page" id="part-3">
+    <div class="part">
+      <div class="pnum">Part three</div>
+      <h2>Adding a feature, bottom-up</h2>
+      <p class="lede">Eight steps, always in the same order, worked end to end on the feature that already exists: <code>POST /users/sync</code>. Follow the same sequence for rides, bookings, rewards and the pet shop and each one lands the same way.</p>
+    </div>
+
+  <!-- ============ why this order ============ -->
+  <section>
+    <div class="eyebrow">The principle</div>
+    <h2>Why the order is forced, not chosen</h2>
+    <p class="measure">A layer may import only from the layers beneath it. That single rule
+      determines the build order completely: you cannot write a thing before the thing it imports
+      exists. Start at the top and you will write a route that calls a service that does not exist,
+      discover the shape is wrong, and rewrite both.</p>
+
+    <div class="layers">
+      <div class="layer l-api"><span class="lname">6 &middot; route</span><span class="ldesc">imports the service and the schemas</span></div>
+      <div class="layer l-svc"><span class="lname">4 &middot; service</span><span class="ldesc">imports the repositories and the errors</span></div>
+      <div class="layer l-repo"><span class="lname">3 &middot; repository</span><span class="ldesc">imports the schemas</span></div>
+      <div class="layer l-core"><span class="lname">2 &middot; schema</span><span class="ldesc">imports nothing of yours but the enums</span></div>
+      <div class="layer l-core"><span class="lname">1 &middot; migration</span><span class="ldesc">the table the schema mirrors</span></div>
+    </div>
+    <div class="dirnote">write upward &uarr; &nbsp; imports point downward &darr;</div>
+
+    <p class="measure">Steps 5, 7 and 8 &mdash; the dependency, the wiring and the tests &mdash; fall
+      outside that stack, and are covered in place below.</p>
+  </section>
+  <!-- ============ the steps ============ -->
+  <section>
+    <div class="eyebrow">The method</div>
+    <h2>Eight steps</h2>
+
+    <ol class="flow">
+
+      <!-- 1 -->
+      <li>
+        <div class="gutter"><span class="num">1</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Write the migration</span>
+            <span class="where">supabase/migrations/</span>
+            <span class="chip core">sql</span>
+          </div>
+          <p>The schema is a deliverable checked into git, not something that lives only in the
+            Supabase console. Decide the columns, the constraints and the enum types here, because
+            every layer above is a mirror of this decision.</p>
+          <pre>CREATE TABLE users (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clerk_id      TEXT UNIQUE NOT NULL,     <span class="c">-- the constraint the whole sync relies on</span>
+    email         TEXT NOT NULL,
+    ...
+    CONSTRAINT users_green_points_non_negative CHECK (green_points &gt;= 0)
+);</pre>
+          <p><strong>The decision that mattered:</strong> <code>clerk_id TEXT UNIQUE</code>. That one
+            constraint is what lets two concurrent first sign-ins race safely, because the database
+            settles the conflict rather than Python. Push invariants into constraints wherever the
+            database can hold them.</p>
+        </div>
+      </li>
+
+      <!-- 2 -->
+      <li>
+        <div class="gutter"><span class="num">2</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Define the schemas</span>
+            <span class="where">app/schemas/</span>
+            <span class="chip core">schemas</span>
+          </div>
+          <p>Two models, split by direction. The domain model mirrors the table; the response model
+            is what you are willing to put on the wire.</p>
+          <pre><span class="k">class</span> User(BaseModel):        <span class="c"># schemas/user.py:9  — internal, has clerk_id</span>
+<span class="k">class</span> UserResponse(BaseModel): <span class="c"># schemas/user.py:23 — the wire, no clerk_id</span></pre>
+          <p><strong>The decision that mattered:</strong> <code>clerk_id</code> appears in
+            <code>User</code> and not in <code>UserResponse</code>. The token subject is an internal
+            identifier; nothing outside the backend needs it. Splitting the models is what makes
+            that omission structural rather than something you must remember in every handler.</p>
+          <p>Shared literal types go in <code>schemas/enums.py</code> so
+            <code>Campus</code> and <code>UserRole</code> are declared once and every model that uses
+            them agrees with the SQL enum by construction.</p>
+        </div>
+      </li>
+
+      <!-- 3 -->
+      <li>
+        <div class="gutter"><span class="num">3</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Write the repository</span>
+            <span class="where">app/repositories/</span>
+            <span class="chip core">data</span>
+          </div>
+          <p>One module per table. Every Supabase call in the codebase lives in one of these, and
+            each function returns a domain model, never a raw dict. Functions take the client as
+            their first argument rather than importing it, which is what keeps them callable from a
+            script.</p>
+          <pre><span class="k">def</span> get_by_clerk_id(db: Client, clerk_id: str) -&gt; User | <span class="k">None</span>:
+    res = db.table(TABLE).select(<span class="c">"*"</span>).eq(<span class="c">"clerk_id"</span>, clerk_id).limit(1).execute()
+    <span class="k">return</span> User.model_validate(res.data[0]) <span class="k">if</span> res.data <span class="k">else None</span></pre>
+          <p><strong>The decision that mattered:</strong> <code>upsert(..., on_conflict="clerk_id",
+            ignore_duplicates=True)</code> instead of checking then inserting. A check-then-insert
+            has a window between the two statements where a second request can slip in. Let the
+            unique constraint decide.</p>
+          <p><code>model_validate</code> rather than <code>User(**row)</code>, because supabase types
+            <code>res.data</code> as a JSON union and <code>**</code> requires a proven mapping.</p>
+        </div>
+      </li>
+
+      <!-- 4 -->
+      <li>
+        <div class="gutter"><span class="num">4</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Write the service</span>
+            <span class="where">app/services/</span>
+            <span class="chip core">logic</span>
+          </div>
+          <p>All the branching lives here, and none of it knows what HTTP is. No
+            <code>Request</code>, no <code>HTTPException</code>, no status codes &mdash; failures are
+            <code>DomainError</code> subclasses.</p>
+          <pre><span class="k">def</span> sync(db: Client, *, clerk_id: str, email: str, full_name: str) -&gt; User:
+    existing = user_repository.get_by_clerk_id(db, clerk_id)
+    <span class="k">if not</span> existing:
+        created = user_repository.create_if_absent(...)
+        <span class="k">if not</span> created:                            <span class="c"># another request won the race</span>
+            created = user_repository.get_by_clerk_id(db, clerk_id)
+            <span class="k">if not</span> created:
+                <span class="k">raise</span> DomainError(<span class="c">"user sync failed"</span>)
+        rewards_repository.create_if_absent(db, user_id=created.id)
+        <span class="k">return</span> created</pre>
+          <p><strong>The decision that mattered:</strong> the re-read after a failed insert.
+            <code>ignore_duplicates</code> returns nothing when another request inserted first, and
+            that is a success, not an error &mdash; so read the row that the other request wrote.
+            Race handling belongs here, where it can be tested without a database.</p>
+          <p>Also here: creating the rewards row eagerly rather than on first visit to the pet page,
+            so no later code has to cope with its absence.</p>
+        </div>
+      </li>
+
+      <!-- 5 -->
+      <li>
+        <div class="gutter"><span class="num">5</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Add a dependency, only if needed</span>
+            <span class="where">app/api/deps.py</span>
+            <span class="chip api">api/</span>
+          </div>
+          <p>Most features skip this step. Add a name only when more than one route will need the
+            same prepared value. User sync needed nothing new &mdash; <code>CurrentClaims</code> and
+            <code>SupabaseDep</code> already existed.</p>
+          <p>See <a href="#part-2">part two</a> for the checklist when you do need one.</p>
+        </div>
+      </li>
+
+      <!-- 6 -->
+      <li>
+        <div class="gutter"><span class="num">6</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Write the route</span>
+            <span class="where">app/api/routes/</span>
+            <span class="chip api">api/</span>
+          </div>
+          <p>The thinnest layer in the codebase. Declare what you need, call one service, return.
+            If a route grows an <code>if</code> that is not about HTTP, it belongs in the service.</p>
+          <pre>router = APIRouter(prefix=<span class="c">"/users"</span>, tags=[<span class="c">"users"</span>])
+
+<span class="k">@router.post</span>(<span class="c">"/sync"</span>, response_model=UserResponse)
+<span class="k">def</span> sync_user(claims: CurrentClaims, db: SupabaseDep) -&gt; User:
+    <span class="k">return</span> user_service.sync(
+        db, clerk_id=claims.clerk_id, email=claims.email, full_name=claims.full_name
+    )</pre>
+          <p><strong>The decision that mattered:</strong> the annotation returns <code>User</code>
+            while <code>response_model</code> is <code>UserResponse</code>. The function hands back
+            the internal model and FastAPI narrows it on the way out, so <code>clerk_id</code> is
+            dropped by the framework rather than by hand. <code>tags</code> groups the endpoint in
+            <code>/docs</code>.</p>
+        </div>
+      </li>
+
+      <!-- 7 -->
+      <li>
+        <div class="gutter"><span class="num">7</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Mount it</span>
+            <span class="where">app/api/router.py</span>
+            <span class="chip api">api/</span>
+          </div>
+          <p>Two lines, and the easiest step to forget. Until this happens the route exists and is
+            unreachable, and the tests that would catch it are the ones you have not written yet.</p>
+          <pre><span class="k">from</span> app.api.routes <span class="k">import</span> users
+api_router.include_router(users.router)</pre>
+          <p>The <code>/api/v1</code> prefix is carried by <code>api_router</code>, so the final path
+            is the concatenation of three pieces: <code>/api/v1</code> + <code>/users</code> +
+            <code>/sync</code>.</p>
+        </div>
+      </li>
+
+      <!-- 8 -->
+      <li>
+        <div class="gutter"><span class="num">8</span><span class="thread"></span></div>
+        <div class="step">
+          <div class="step-head">
+            <span class="name">Test the service, not the plumbing</span>
+            <span class="where">tests/unit/</span>
+            <span class="chip core">tests</span>
+          </div>
+          <p>The service holds the behaviour worth asserting, so test it directly with fake
+            repositories and no database at all.</p>
+          <pre>monkeypatch.setattr(user_service, <span class="c">"user_repository"</span>, users)     <span class="c"># fakes</span>
+monkeypatch.setattr(user_service, <span class="c">"rewards_repository"</span>, rewards)
+
+first = user_service.sync(NO_DB, **kwargs)
+<span class="k">for</span> _ <span class="k">in</span> range(9):
+    user_service.sync(NO_DB, **kwargs)
+<span class="k">assert</span> users.inserts == 1        <span class="c"># idempotent, the actual claim</span></pre>
+          <p><strong>The decision that mattered:</strong> the test asserts idempotency by calling ten
+            times, because "safe to call on every page load" is the whole contract of this endpoint.
+            Test the promise, not the implementation.</p>
+          <p><code>NO_DB</code> is <code>cast(Client, None)</code> &mdash; the fakes never touch it,
+            and the cast is what tells mypy you know.</p>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+  <!-- ============ gaps ============ -->
+  <section>
+    <div class="eyebrow">Honest limits</div>
+    <h2>What this method does not catch</h2>
+    <p class="measure">Every layer above was verified without a database. That is the point, and it
+      is also the gap: nothing in the suite proves the Pydantic models match the real columns.</p>
+    <div class="split">
+      <div class="card fail">
+        <h3>Column drift</h3>
+        <p>A field renamed in SQL but not in <code>schemas/user.py</code> passes every test and fails
+          on the first real request.</p>
+      </div>
+      <div class="card fail">
+        <h3>Constraint violations</h3>
+        <p><code>phone</code> is <code>NOT NULL</code> and <code>create_if_absent</code> sends
+          <code>""</code>. Legal, but it produces a user with no reachable number &mdash; which
+          matters once bookings start revealing it.</p>
+      </div>
+    </div>
+    <p class="measure">So the last step of any feature is a real call against a real Supabase
+      instance before you call it done.</p>
+  </section>
+  <!-- ============ verify ============ -->
+  <section>
+    <div class="eyebrow">Closing the loop</div>
+    <h2>The verification ladder</h2>
+    <p class="measure">Run these in order. Each one is slower than the last and only worth reaching
+      when the one before it is clean.</p>
+    <pre class="plain"><span class="c"># 1. style and imports, instant</span>
+uv run ruff check . &amp;&amp; uv run ruff format --check .
+
+<span class="c"># 2. types across app, tests and scripts</span>
+uv run mypy app tests scripts
+
+<span class="c"># 3. behaviour, no database, no network</span>
+uv run pytest -q
+
+<span class="c"># 4. the route is actually mounted</span>
+uv run python -c "from app.main import app; print([r.path for r in app.routes])"
+
+<span class="c"># 5. auth really rejects</span>
+curl -i -X POST localhost:8000/api/v1/users/sync          <span class="c"># expect 401</span>
+
+<span class="c"># 6. the real thing, real token, real database</span>
+curl -i -X POST localhost:8000/api/v1/users/sync -H "Authorization: Bearer $TOKEN"</pre>
+
+    <ul class="check">
+      <li>Migration written and checked into <code>supabase/migrations/</code></li>
+      <li>Schemas split into domain and response, secrets absent from the response model</li>
+      <li>Every Supabase call inside a repository, returning models rather than dicts</li>
+      <li>Service raises <code>DomainError</code> subclasses only, never <code>HTTPException</code></li>
+      <li>Route is thin, mounted on the router, and tagged</li>
+      <li>Service tested against fakes; the assertion states the promise, not the implementation</li>
+      <li>Steps 1 to 6 of the ladder green, and step 6 run once against real Supabase</li>
+    </ul>
+  </section>
+
+    <div class="pagers"><a class="pager prev" href="#part-2"><span class="dir">&larr; previous</span><span class="t">The dependency vocabulary</span></a><a class="pager next" href="#part-4"><span class="dir">next &rarr;</span><span class="t">Errors, and why they are ours</span></a></div>
+  </article>
+
+  <article class="doc-page" id="part-4">
+    <div class="part">
+      <div class="pnum">Part four</div>
+      <h2>Errors, and why they are ours</h2>
+      <p class="lede">Four small classes and one handler. The payoff is that business logic never
+        learns what an HTTP status code is, and every failure leaves the app through the same
+        door.</p>
+    </div>
+
+    <section>
+      <div class="eyebrow">The problem</div>
+      <h2>What raising HTTPException would cost</h2>
+      <p class="measure">The obvious approach is for a service to raise
+        <code>HTTPException(404)</code> where the problem is found. It works, and it quietly welds
+        two things together that should not be.</p>
+
+      <div class="split">
+        <div class="card fail">
+          <h3>Business logic stops being reusable</h3>
+          <p>A service that raises <code>HTTPException</code> can only be called from inside a web
+            request. The seed script, a scheduled ride-completion job, a test &mdash; none of them
+            have a request, and none should have to import FastAPI to call <code>sync</code>.</p>
+        </div>
+        <div class="card fail">
+          <h3>The status code decision scatters</h3>
+          <p>"A missing ride is a 404" ends up written in six services. Change your mind and you
+            change six files, and miss one.</p>
+        </div>
+      </div>
+
+      <p class="measure">So services raise errors that describe <em>what went wrong in the domain</em>,
+        and exactly one module decides what that means over HTTP.</p>
+    </section>
+
+    <section>
+      <div class="eyebrow">The design</div>
+      <h2>One base class, status declared on the subclass</h2>
+      <p class="measure">Every error carries the status it maps to as a class attribute. That is the
+        trick that keeps the handler from growing an <code>if</code> chain.</p>
+
+      <pre><span class="k">class</span> DomainError(Exception):     <span class="c"># errors.py:13</span>
+    status_code: int = 500          <span class="c"># the default when nothing more specific fits</span>
+
+    <span class="k">def</span> __init__(self, detail: str) -&gt; <span class="k">None</span>:
+        super().__init__(detail)
+        self.detail = detail</pre>
+
+      <div class="kv">
+        <div><span class="k2">DomainError</span><span class="v2"><b>500</b> &mdash; a business rule
+          was violated and no subclass fits. Used directly in
+          <code>user_service.py</code> when a row cannot be found or created after a race.</span></div>
+        <div><span class="k2">NotFoundError</span><span class="v2"><b>404</b> &mdash; the resource
+          does not exist, or the caller may not know that it does.</span></div>
+        <div><span class="k2">PermissionDeniedError</span><span class="v2"><b>403</b> &mdash;
+          authenticated, but not allowed to do this. A booking that is not yours.</span></div>
+        <div><span class="k2">InvalidCredentialsError</span><span class="v2"><b>401</b> &mdash; the
+          token is missing, malformed, expired, or not signed by Clerk.</span></div>
+      </div>
+
+      <p class="measure">Note that <code>NotFoundError</code> deliberately covers "you may not know
+        it exists". Returning 404 rather than 403 for someone else's booking hides whether that id
+        is real, which is a security decision encoded in the choice of error class.</p>
+    </section>
+
+    <section>
+      <div class="eyebrow">The path</div>
+      <h2>How an error travels out</h2>
+      <p class="measure">Nothing catches it in between. The raise unwinds the stack all the way to
+        the app boundary.</p>
+
+      <div class="seq">
+        <div class="seq-band"><span class="band-tag before">raised</span></div>
+        <div class="seq-row">
+          <span class="s-n">1</span><span class="s-call">verify_clerk_token</span>
+          <span class="s-out">raise</span>
+          <span class="s-guard"><code>InvalidCredentialsError</code>, <code>security.py:47</code></span>
+        </div>
+        <div class="seq-band"><span class="band-tag body">unwinds</span></div>
+        <div class="seq-row">
+          <span class="s-n">2</span><span class="s-call">get_current_claims</span>
+          <span class="s-out">&mdash;</span>
+          <span class="s-guard">does not catch it</span>
+        </div>
+        <div class="seq-row">
+          <span class="s-n">3</span><span class="s-call">sync_user</span>
+          <span class="s-out">&mdash;</span>
+          <span class="s-guard">never entered at all</span>
+        </div>
+        <div class="seq-band"><span class="band-tag after">caught</span></div>
+        <div class="seq-row is-body">
+          <span class="s-n">4</span><span class="s-call">domain_error_handler</span>
+          <span class="s-out">&rarr; JSON</span>
+          <span class="s-guard">reads <code>.status_code</code> and <code>.detail</code>, <code>handlers.py:16</code></span>
+        </div>
+      </div>
+
+      <h3>Why one registration covers four classes</h3>
+      <pre>app.add_exception_handler(DomainError, domain_error_handler)   <span class="c"># handlers.py:39</span></pre>
+      <p class="measure">Starlette walks the exception's inheritance chain looking for a match. An
+        <code>InvalidCredentialsError</code> is not registered, but its parent
+        <code>DomainError</code> is, so the handler runs. Adding a fifth error type in sprint 3 is
+        one class in <code>errors.py</code> and <strong>no change to</strong>
+        <code>handlers.py</code>.</p>
+    </section>
+
+    <section>
+      <div class="eyebrow">Easily missed</div>
+      <h2>Three error paths, not one</h2>
+      <p class="measure">Only one of these is yours. Knowing which is which saves a lot of confused
+        debugging, because the response shapes differ.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Raised</th><th>Handled by</th><th>Status</th><th>Body</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>DomainError</code> subclass</td>
+              <td>your <code>domain_error_handler</code></td>
+              <td>the class attribute</td>
+              <td class="mono">{"detail": "ride not found"}</td>
+            </tr>
+            <tr>
+              <td><code>ValueError</code> in a Pydantic validator, or a bad request body</td>
+              <td>FastAPI's built-in validation handler</td>
+              <td class="mono">422</td>
+              <td class="mono">{"detail": [{"loc":…, "msg":…}]}</td>
+            </tr>
+            <tr>
+              <td>anything else (<code>KeyError</code>, <code>TypeError</code>)</td>
+              <td>nobody</td>
+              <td class="mono">500</td>
+              <td class="mono">Internal Server Error</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="measure">Your <code>normalize_phone</code> validator in
+        <code>schemas/user.py</code> raises <code>ValueError</code>, so it takes the middle row: a
+        422 with a list of field errors, not your <code>{"detail": "..."}</code> shape. That is
+        correct &mdash; field-level problems belong to the request, not the domain &mdash; but the
+        frontend has to handle both shapes.</p>
+
+      <div class="note">
+        <strong>The third row is the one to watch.</strong> An unhandled exception returns the
+        string <code>Internal Server Error</code>, not JSON. <code>tests/unit/test_exceptions.py</code>
+        asserts the difference: a bare <code>DomainError</code> produces
+        <code>{"detail": "something went wrong"}</code>, which only happens because a handler is
+        registered. A crash would not.
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Tracking</div>
+      <h2>What is recorded today: nothing</h2>
+      <p class="measure">Worth stating plainly rather than implying otherwise. There is no
+        <code>logging</code> call anywhere in <code>app/</code>. A 401 from a forged token and a 500
+        from a failed sync both vanish silently once the response is sent.</p>
+
+      <p class="measure">What the design does give you is the place to fix that. Every domain failure
+        passes through <code>domain_error_handler</code>, so instrumentation is one function rather
+        than an audit of every service:</p>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">add in the handler</span><span class="m">buys you</span></div>
+        <div class="annot-row"><span class="o">log at WARNING for 4xx, ERROR for 5xx</span><span class="m">Split "the caller did something wrong" from "we are broken". Only the second should page anyone.</span></div>
+        <div class="annot-row"><span class="o">log request.method and request.url.path</span><span class="m">The handler already receives <code>request</code> and currently ignores it. Which endpoint failed is the first question you will ask.</span></div>
+        <div class="annot-row"><span class="o">exc_info=True on 5xx</span><span class="m">Keeps the traceback, including the <code>from exc</code> cause chain.</span></div>
+        <div class="annot-row"><span class="o">a request id, echoed in the body</span><span class="m">A user reports "it said error"; you find the exact request.</span></div>
+      </div>
+
+      <h3>The cause chain is already preserved</h3>
+      <pre><span class="k">raise</span> InvalidCredentialsError(<span class="c">"invalid or expired token"</span>) <span class="k">from</span> exc   <span class="c"># security.py:47</span></pre>
+      <p class="measure">The <code>from exc</code> matters. It attaches the original
+        <code>PyJWTError</code> as <code>__cause__</code>, so a traceback shows both the domain error
+        and the real reason underneath &mdash; expired signature, wrong issuer, malformed token. The
+        client still gets one deliberately vague message; the traceback keeps the truth. That
+        asymmetry is the point: detail for you, not for an attacker probing which half of the token
+        is wrong.</p>
+    </section>
+
+    <section>
+      <div class="eyebrow">The payoff</div>
+      <h2>What this buys</h2>
+      <div class="rule-line-list">
+        <div class="rule-line"><span class="tag yes">1</span><span><b>Services run anywhere.</b> <code>user_service.sync</code> is callable from a script, a cron job, or a test with no FastAPI import. That is what <code>tests/unit/test_user_service.py</code> relies on.</span></div>
+        <div class="rule-line"><span class="tag yes">2</span><span><b>One place decides the wire format.</b> Change the body from <code>{"detail":…}</code> to <code>{"error":…}</code> and every endpoint changes together.</span></div>
+        <div class="rule-line"><span class="tag yes">3</span><span><b>New error types are free.</b> One class, no handler edit. <code>RideFullError</code> and <code>InsufficientPointsError</code> will slot in without touching anything else.</span></div>
+        <div class="rule-line"><span class="tag yes">4</span><span><b>One instrumentation point.</b> Logging, metrics or Sentry go in the handler, not in fifty raise sites.</span></div>
+        <div class="rule-line"><span class="tag yes">5</span><span><b>Consistent errors for the frontend.</b> Every domain failure has the same shape, so the client has one error path instead of one per endpoint.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Extending it</div>
+      <h2>Adding an error type</h2>
+      <ul class="check">
+        <li>Subclass <code>DomainError</code> in <code>errors.py</code> and set <code>status_code</code>.</li>
+        <li>Give it a docstring saying when it applies, in the voice of the domain rather than of HTTP.</li>
+        <li>Raise it from the service, never from a repository, and never from a route.</li>
+        <li>Do not touch <code>handlers.py</code>. If you feel you need to, the status probably belongs on the class instead.</li>
+        <li>Choose the class for what it reveals: <code>NotFoundError</code> over <code>PermissionDeniedError</code> when confirming existence would leak something.</li>
+      </ul>
+    </section>
+    <div class="pagers"><a class="pager prev" href="#part-3"><span class="dir">&larr; previous</span><span class="t">Adding a feature, bottom-up</span></a><span></span></div>
+  </article>
+
+  <footer>
+    <div>MonashGO &middot; backend handbook &middot; build order step 2</div>
+    <div>Line numbers reflect the tree at commit <span class="mono">a7cfb9d</span>. The code is
+      always the source of truth: <span class="mono">app/api/deps.py</span>,
+      <span class="mono">app/core/security.py</span>,
+      <span class="mono">app/exceptions/handlers.py</span>. This page explains intent.</div>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var ids = ['part-1', 'part-2', 'part-3', 'part-4'].map(String);
+  var pages = ids.map(function (id) { return document.getElementById(id); });
+  var links = Array.prototype.slice.call(document.querySelectorAll('.pagenav a'));
+
+  function show(id, push) {
+    if (ids.indexOf(id) === -1) id = ids[0];
+    pages.forEach(function (p) { p.classList.toggle('is-active', p.id === id); });
+    links.forEach(function (a) {
+      var on = a.getAttribute('data-page') === id;
+      a.classList.toggle('is-active', on);
+      if (on) { a.setAttribute('aria-current', 'page'); } else { a.removeAttribute('aria-current'); }
+    });
+    document.title = 'Backend Handbook';
+    if (push) window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  function fromHash(push) { show((location.hash || '').replace('#', ''), push); }
+
+  // every in-document link switches pages rather than scrolling
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var id = a.getAttribute('href').slice(1);
+    if (ids.indexOf(id) === -1) return;
+    e.preventDefault();
+    if (location.hash !== '#' + id) { history.pushState(null, '', '#' + id); }
+    show(id, true);
+  });
+
+  window.addEventListener('hashchange', function () { fromHash(true); });
+  window.addEventListener('popstate', function () { fromHash(true); });
+  document.documentElement.classList.add('js');
+  fromHash(false);
+})();
+</script>
+</body>
+</html>

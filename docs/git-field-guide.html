@@ -1,0 +1,2189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+
+/* ---- tokens: light is the base, complete on bare :root ---- */
+:root {
+  --paper:      #f6f8f8;
+  --surface:    #ffffff;
+  --surface-2:  #eef2f2;
+  --ink:        #101619;
+  --ink-2:      #3d4a4e;
+  --ink-3:      #6b7b80;
+  --rule:       #d8e0e0;
+  --rule-soft:  #e7eded;
+
+  --accent:     #0d6d68;   /* verified path, api/ layer */
+  --accent-ink: #0a5450;
+  --accent-bg:  #e2efee;
+  --reject:     #a3341f;   /* the 401 path */
+  --reject-bg:  #f7e8e4;
+  --ochre:      #8a6414;   /* core/ layer */
+  --ochre-bg:   #f4eddc;
+  --slate:      #5a6b70;   /* external */
+  --slate-bg:   #e8edee;
+
+  --measure: 68ch;
+  --radius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0b1013;
+    --surface:    #121a1d;
+    --surface-2:  #182226;
+    --ink:        #e4ecec;
+    --ink-2:      #adbdbf;
+    --ink-3:      #7e9094;
+    --rule:       #253134;
+    --rule-soft:  #1b2528;
+
+    --accent:     #58c3ba;
+    --accent-ink: #7ad6cd;
+    --accent-bg:  #102a29;
+    --reject:     #e08b74;
+    --reject-bg:  #2c1712;
+    --ochre:      #d3a842;
+    --ochre-bg:   #2a2213;
+    --slate:      #9aacb0;
+    --slate-bg:   #1a2326;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0b1013;
+  --surface:    #121a1d;
+  --surface-2:  #182226;
+  --ink:        #e4ecec;
+  --ink-2:      #adbdbf;
+  --ink-3:      #7e9094;
+  --rule:       #253134;
+  --rule-soft:  #1b2528;
+
+  --accent:     #58c3ba;
+  --accent-ink: #7ad6cd;
+  --accent-bg:  #102a29;
+  --reject:     #e08b74;
+  --reject-bg:  #2c1712;
+  --ochre:      #d3a842;
+  --ochre-bg:   #2a2213;
+  --slate:      #9aacb0;
+  --slate-bg:   #1a2326;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 16.5px;
+  line-height: 1.65;
+  font-feature-settings: "kern";
+}
+
+.wrap {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 3rem) 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3.25rem;
+}
+.measure { max-width: var(--measure); }
+
+/* ---- type ---- */
+h1, h2, h3 {
+  font-family: "IBM Plex Serif", ui-serif, Georgia, serif;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.2;
+}
+h1 { font-size: clamp(1.95rem, 4.2vw, 2.9rem); letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.03rem; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+code, .mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86em;
+}
+p code, li code, td code {
+  background: var(--surface-2);
+  padding: 0.1em 0.34em;
+  border-radius: var(--radius);
+}
+
+section { display: flex; flex-direction: column; gap: 1.15rem; }
+.lede { color: var(--ink-2); font-size: 1.06rem; }
+.stack { display: flex; flex-direction: column; gap: 0.85rem; }
+
+/* ---- masthead ---- */
+header.masthead {
+  display: flex; flex-direction: column; gap: 1.1rem;
+  padding-bottom: 2.25rem;
+  border-bottom: 2px solid var(--ink);
+}
+.route-line {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.95rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  color: var(--ink-2);
+}
+.verb {
+  background: var(--accent); color: var(--paper);
+  padding: 0.12rem 0.5rem; border-radius: var(--radius);
+  font-weight: 600; font-size: 0.8rem; letter-spacing: 0.04em;
+}
+
+/* ---- layer chips: the structural device. colour == architectural layer ---- */
+.chip {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.14rem 0.42rem; border-radius: var(--radius);
+  white-space: nowrap;
+}
+.chip.ext   { background: var(--slate-bg);  color: var(--slate); }
+.chip.api   { background: var(--accent-bg); color: var(--accent-ink); }
+.chip.core  { background: var(--ochre-bg);  color: var(--ochre); }
+.chip.err   { background: var(--reject-bg); color: var(--reject); }
+
+/* ---- the stepper ---- */
+ol.flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ol.flow > li { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0 1.1rem; }
+.gutter { display: flex; flex-direction: column; align-items: center; }
+.num {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem; font-weight: 600;
+  width: 1.7rem; height: 1.7rem; flex: none;
+  display: grid; place-items: center;
+  border: 1px solid var(--rule); border-radius: 50%;
+  background: var(--surface); color: var(--ink-2);
+}
+li.is-gate .num { border-color: var(--accent); color: var(--accent-ink); }
+.thread { flex: 1; width: 1px; background: var(--rule); margin: 0.4rem 0; min-height: 0.9rem; }
+ol.flow > li:last-child .thread { background: transparent; }
+.step {
+  padding-bottom: 1.55rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  min-width: 0;
+}
+.step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.7rem; }
+.step-head .name { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.95rem; }
+.where {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.76rem; color: var(--ink-3);
+}
+.step p { color: var(--ink-2); font-size: 0.965rem; max-width: 62ch; }
+/* inline flow, not flex: mixed text and inline elements would each become a
+   flex item and pick up the gap between every word run */
+.hands {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.79rem; color: var(--ink-3);
+  line-height: 1.6;
+}
+.hands b { color: var(--accent-ink); font-weight: 500; }
+.hands code { font-size: 1em; }
+
+/* ---- code ---- */
+pre {
+  margin: 0; padding: 0.85rem 1rem;
+  background: var(--surface); border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem; line-height: 1.62;
+  color: var(--ink);
+  tab-size: 4;
+}
+pre.plain { border-left-color: var(--rule); }
+pre .c { color: var(--ink-3); }
+pre .k { color: var(--accent-ink); }
+
+/* ---- tables ---- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule-soft); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 30rem; }
+th, td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+thead th {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500;
+  background: var(--surface-2);
+}
+tbody tr:last-child td { border-bottom: 0; }
+td.mono, th.mono { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
+
+/* ---- two-column split ---- */
+.split { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--rule-soft);
+  border-radius: var(--radius); padding: 1rem 1.15rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+.card.fail { border-top: 2px solid var(--reject); }
+.card.fail h3 { color: var(--reject); }
+.card p { font-size: 0.93rem; color: var(--ink-2); }
+
+/* ---- layer map ---- */
+.layers { display: flex; flex-direction: column; gap: 0; max-width: 46rem; }
+.layer {
+  display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr;
+  gap: 0.4rem 1.1rem; align-items: baseline;
+  padding: 0.72rem 0.9rem;
+  border: 1px solid var(--rule-soft); border-bottom: 0;
+  background: var(--surface);
+}
+.layer:last-child { border-bottom: 1px solid var(--rule-soft); }
+.layer .lname { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; font-weight: 600; }
+.layer .ldesc { font-size: 0.9rem; color: var(--ink-2); }
+.layer.l-api  { border-left: 3px solid var(--accent); }
+.layer.l-svc  { border-left: 3px solid var(--ink-3); }
+.layer.l-repo { border-left: 3px solid var(--ink-3); }
+.layer.l-core { border-left: 3px solid var(--ochre); }
+.dirnote {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem;
+  color: var(--ink-3); padding-left: 0.9rem;
+}
+
+/* ---- callout ---- */
+.note {
+  border-left: 2px solid var(--ochre);
+  background: var(--ochre-bg);
+  padding: 0.8rem 1.05rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.93rem;
+  color: var(--ink-2);
+}
+.note strong { color: var(--ink); }
+
+ul.tight { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.4rem; color: var(--ink-2); font-size: 0.965rem; }
+ul.tight li::marker { color: var(--ink-3); }
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding-top: 1.4rem;
+  font-size: 0.84rem; color: var(--ink-3);
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---- shared across the doc set ---- */
+.docnav {
+  display: flex; flex-wrap: wrap; gap: 0.55rem;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+.docnav a, .docnav span {
+  padding: 0.2rem 0.55rem; border-radius: var(--radius);
+  border: 1px solid var(--rule); color: var(--ink-3); text-decoration: none;
+}
+.docnav a:hover { border-color: var(--accent); color: var(--accent-ink); }
+.docnav .here { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* three-column map: what flows in, what lives here, what consumes it */
+.pipe { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); align-items: start; }
+.pipe-col { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.pipe-col > .eyebrow { margin-bottom: 0.15rem; }
+.node {
+  background: var(--surface); border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--rule); border-radius: var(--radius);
+  padding: 0.5rem 0.7rem; font-size: 0.86rem;
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+.node .n { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.82rem; word-break: break-word; }
+.node .d { color: var(--ink-3); font-size: 0.79rem; }
+.node.core { border-left-color: var(--ochre); }
+.node.api  { border-left-color: var(--accent); }
+.node.ext  { border-left-color: var(--slate); }
+
+/* key/value definition rows */
+.kv { display: flex; flex-direction: column; border: 1px solid var(--rule-soft); border-radius: var(--radius); overflow: hidden; }
+.kv > div {
+  display: grid; grid-template-columns: minmax(9rem, 14rem) 1fr; gap: 0.3rem 1.1rem;
+  padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--rule-soft); background: var(--surface);
+}
+.kv > div:last-child { border-bottom: 0; }
+.kv dt, .kv .k2 { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600; color: var(--accent-ink); word-break: break-word; }
+.kv dd, .kv .v2 { margin: 0; font-size: 0.92rem; color: var(--ink-2); }
+
+/* checklist */
+ul.check { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+/* the marker is absolutely positioned, NOT a grid/flex item: the li must stay a
+   normal block so its inline <code> runs flow inside the sentence */
+ul.check li {
+  position: relative; padding-left: 1.75rem;
+  font-size: 0.94rem; color: var(--ink-2); line-height: 1.6;
+}
+ul.check li::before {
+  content: "\2610"; position: absolute; left: 0; top: 0;
+  color: var(--ink-3); font-size: 1rem; line-height: inherit;
+}
+
+@media (max-width: 34rem) {
+  .kv > div { grid-template-columns: 1fr; }
+  .layer { grid-template-columns: 1fr; }
+  ol.flow > li { grid-template-columns: 1.9rem 1fr; gap: 0 0.8rem; }
+}
+
+/* ---- in / out block: what a function receives and what it returns ---- */
+.io {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--rule-soft); border-radius: var(--radius);
+  overflow: hidden; background: var(--surface);
+}
+.io-row {
+  display: grid; grid-template-columns: 3.1rem 1fr; gap: 0.9rem;
+  padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--rule-soft);
+  align-items: start;
+}
+.io-row:last-child { border-bottom: 0; }
+.io-tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 0.16rem 0; text-align: center; border-radius: var(--radius);
+}
+.io-tag.in   { background: var(--slate-bg);  color: var(--slate); }
+.io-tag.out  { background: var(--accent-bg); color: var(--accent-ink); }
+.io-tag.none { background: var(--reject-bg); color: var(--reject); }
+.io-val { font-size: 0.88rem; color: var(--ink-2); min-width: 0; overflow-x: auto; }
+.io-val > code { display: block; font-size: 0.78rem; color: var(--ink); word-break: break-all; }
+.io .fields { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.45rem; }
+.io .fields > div {
+  display: grid; grid-template-columns: minmax(6rem, auto) minmax(0, 1fr) auto;
+  gap: 0.3rem 0.9rem; align-items: baseline;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.76rem;
+}
+.io .fields .f { color: var(--accent-ink); font-weight: 500; }
+.io .fields .v { color: var(--ink); word-break: break-all; }
+.io .fields .cmt { color: var(--ink-3); font-size: 0.72rem; text-align: right; }
+@media (max-width: 42rem) {
+  .io .fields > div { grid-template-columns: 1fr; gap: 0.05rem; }
+  .io .fields .cmt { text-align: left; }
+}
+
+/* ---- resolution order: what runs before, during and after the body ---- */
+.seq {
+  border: 1px solid var(--rule-soft); border-radius: var(--radius);
+  overflow: hidden; background: var(--surface);
+}
+.seq-band { padding: 0.4rem 0.85rem; background: var(--surface-2); border-bottom: 1px solid var(--rule-soft); }
+.band-tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.band-tag.before { color: var(--accent-ink); }
+.band-tag.body   { color: var(--ink); }
+.band-tag.after  { color: var(--ochre); }
+.seq-row {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(9rem, auto) minmax(4.5rem, auto) minmax(0, 1fr);
+  gap: 0.35rem 0.85rem; align-items: baseline;
+  padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--rule-soft);
+}
+.seq-row:last-child { border-bottom: 0; }
+.seq-row.is-body { background: var(--accent-bg); }
+.s-n {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; font-weight: 600;
+  color: var(--ink-3);
+}
+.s-call { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600; color: var(--ink); word-break: break-word; }
+.s-out  { font-family: "IBM Plex Mono", monospace; font-size: 0.79rem; color: var(--accent-ink); }
+.s-guard { font-size: 0.82rem; color: var(--ink-3); }
+.s-guard b { color: var(--reject); font-weight: 600; }
+@media (max-width: 44rem) {
+  .seq-row { grid-template-columns: 1.6rem 1fr; }
+  .seq-row .s-out, .seq-row .s-guard { grid-column: 2; }
+}
+
+/* ---- paged document ---- */
+.pagenav {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  padding: 0.7rem 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; letter-spacing: 0.03em;
+}
+.pagenav a {
+  display: flex; align-items: baseline; gap: 0.5rem;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius);
+  border: 1px solid var(--rule); color: var(--ink-3); text-decoration: none;
+}
+.pagenav a:hover { border-color: var(--accent); color: var(--accent-ink); }
+.pagenav a .pn { color: var(--ink-3); font-weight: 600; }
+.pagenav a.is-active {
+  background: var(--ink); color: var(--paper); border-color: var(--ink);
+}
+.pagenav a.is-active .pn { color: var(--accent); }
+
+/* no JS: every page stays visible and the document simply scrolls */
+.doc-page { display: flex; flex-direction: column; gap: 3.25rem; }
+html.js .doc-page { display: none; }
+html.js .doc-page.is-active { display: flex; }
+
+.part {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding-top: 1.5rem;
+}
+.part .pnum {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-ink);
+  font-weight: 600;
+}
+.part h2 { font-size: clamp(1.6rem, 3.2vw, 2.1rem); letter-spacing: -0.012em; }
+.part .lede { max-width: var(--measure); }
+section h2 { font-size: clamp(1.24rem, 2.2vw, 1.5rem); }
+
+.pagers {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  padding-top: 2rem; border-top: 1px solid var(--rule);
+}
+.pagers .pager {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding: 0.8rem 1rem; border: 1px solid var(--rule-soft);
+  border-radius: var(--radius); background: var(--surface);
+  text-decoration: none; min-width: 0;
+}
+.pagers .pager:hover { border-color: var(--accent); }
+.pagers .pager.prev { text-align: left; }
+.pagers .pager.next { text-align: right; align-items: flex-end; }
+.pagers .dir {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+.pagers .pager .t { font-size: 0.92rem; color: var(--ink); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ---- commit graphs ---- */
+.graphwrap {
+  border: 1px solid var(--rule-soft); border-radius: var(--radius);
+  background: var(--surface); padding: 1rem 0.9rem 0.8rem;
+  overflow-x: auto;
+}
+.graphwrap + .graphwrap { margin-top: 0.75rem; }
+.graph { display: block; width: 100%; min-width: 30rem; height: auto; }
+.graph .edge      { stroke: var(--rule); stroke-width: 2; fill: none; }
+.graph .edge-new  { stroke: var(--accent); stroke-width: 2; fill: none; }
+.graph .edge-gone { stroke: var(--ink-3); stroke-width: 2; fill: none; stroke-dasharray: 3 4; opacity: 0.5; }
+.graph .node      { fill: var(--surface); stroke: var(--ink-3); stroke-width: 2; }
+.graph .node-new  { fill: var(--accent); stroke: var(--accent); }
+.graph .node-base { fill: var(--ink-3); stroke: var(--ink-3); }
+.graph .node-gone { fill: var(--surface); stroke: var(--ink-3); stroke-dasharray: 3 3; opacity: 0.5; }
+.graph text {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px; fill: var(--ink-2);
+}
+.graph text.hash  { fill: var(--ink); font-weight: 600; }
+.graph text.faded { fill: var(--ink-3); opacity: 0.65; }
+.graph text.tip   { fill: var(--accent-ink); font-weight: 600; }
+.graph text.cap {
+  font-family: "IBM Plex Sans", sans-serif; font-size: 11.5px;
+  fill: var(--ink-3); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.gcap {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: 0.55rem;
+}
+
+.gcap { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: baseline; }
+.gcap .gt { flex: 0 1 auto; }
+.gcap .gon {
+  font-family: "IBM Plex Mono", monospace; text-transform: none; letter-spacing: 0.02em;
+  color: var(--ink-3); font-size: 0.68rem;
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.08rem 0.4rem;
+}
+.gcap .gon b { color: var(--accent-ink); font-weight: 600; }
+.gfoot {
+  margin: 0.7rem 0 0; padding-top: 0.65rem;
+  border-top: 1px solid var(--rule-soft);
+  font-size: 0.86rem; color: var(--ink-2); line-height: 1.55; max-width: 62ch;
+}
+.gfoot code { background: var(--surface-2); padding: 0.08em 0.3em; border-radius: var(--radius); }
+.gfoot b { color: var(--ink); font-weight: 600; }
+
+/* ---- repo topology diagrams ---- */
+.graph .tbox { fill: var(--surface-2); stroke: var(--rule); stroke-width: 1.5; }
+.graph .tbox-mine  { stroke: var(--accent); }
+.graph .tbox-local { stroke: var(--ink-3); stroke-dasharray: 4 3; }
+.graph text.tname { font-size: 12px; font-weight: 600; fill: var(--ink); }
+.graph text.tsub  { font-size: 10.5px; fill: var(--ink-3); }
+.graph .tarrow { stroke: var(--ink-3); stroke-width: 1.6; fill: none; }
+.graph .tarrow-new { stroke: var(--accent); }
+.graph .ahead { fill: var(--ink-3); }
+.graph .ahead-new { fill: var(--accent); }
+.graph text.tlabel { font-size: 10.5px; fill: var(--ink-3); }
+.graph text.tlabel-new { fill: var(--accent-ink); font-weight: 600; }
+
+/* ---- command + annotated output ---- */
+.cmd {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--rule-soft); border-radius: var(--radius); overflow: hidden;
+}
+.cmd-line {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.83rem;
+  padding: 0.6rem 0.85rem; background: var(--surface-2); color: var(--ink);
+  border-bottom: 1px solid var(--rule-soft); overflow-x: auto; white-space: pre;
+}
+.cmd-line::before {
+  content: attr(data-branch) " $ ";
+  color: var(--accent-ink); font-weight: 600;
+}
+.cmd-line[data-branch]::before { content: attr(data-branch) " $ "; }
+.cmd-body { padding: 0.7rem 0.85rem; font-size: 0.9rem; color: var(--ink-2); background: var(--surface); }
+.cmd-body p { margin: 0 0 0.5rem; }
+.cmd-body p:last-child { margin-bottom: 0; }
+
+/* annotated terminal output: line, then what the line means */
+.annot { border: 1px solid var(--rule-soft); border-radius: var(--radius); overflow: hidden; }
+.annot-row {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 0.3rem 1rem; padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--rule-soft); background: var(--surface); align-items: baseline;
+}
+.annot-row:last-child { border-bottom: 0; }
+.annot-row .o {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
+  color: var(--ink); white-space: pre-wrap; word-break: break-word;
+}
+.annot-row .m { font-size: 0.85rem; color: var(--ink-3); }
+.annot-row.head { background: var(--surface-2); }
+.annot-row.head .o, .annot-row.head .m {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.66rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+}
+@media (max-width: 44rem) { .annot-row { grid-template-columns: 1fr; } }
+
+/* danger / safe framing */
+.card.safe { border-top: 2px solid var(--accent); }
+.card.safe h3 { color: var(--accent-ink); }
+.card.warn { border-top: 2px solid var(--ochre); }
+.card.warn h3 { color: var(--ochre); }
+.rule-line {
+  display: flex; gap: 0.7rem; align-items: baseline;
+  padding: 0.55rem 0; border-bottom: 1px solid var(--rule-soft);
+  font-size: 0.93rem; color: var(--ink-2);
+}
+.rule-line:last-child { border-bottom: 0; }
+.rule-line .tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.14rem 0.42rem; border-radius: var(--radius); white-space: nowrap; flex: none;
+}
+.tag.yes { background: var(--accent-bg); color: var(--accent-ink); }
+.tag.no  { background: var(--reject-bg); color: var(--reject); }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">MonashGO &middot; working with git</div>
+    <h1>Git field guide</h1>
+    <p class="lede measure">Rebase, reset and the inspection commands, explained by what they do to
+      commits rather than by what they are called. Every example is one that actually comes up on
+      this project.</p>
+    <div class="route-line">
+      <span class="verb">rule</span>
+      <span>if it was committed, git can get it back</span>
+      <span style="color:var(--ink-3)">&mdash; uncommitted work is the only work at real risk</span>
+    </div>
+  </header>
+
+  <nav class="pagenav" aria-label="Sections">
+    <a href="#part-1" data-page="part-1"><span class="pn">I</span>the model &amp; rebase</a>
+    <a href="#part-2" data-page="part-2"><span class="pn">II</span>undoing</a>
+    <a href="#part-3" data-page="part-3"><span class="pn">III</span>inspecting</a>
+    <a href="#part-4" data-page="part-4"><span class="pn">IV</span>everyday</a>
+    <a href="#part-5" data-page="part-5"><span class="pn">V</span>forks &amp; PRs</a>
+  </nav>
+
+  <article class="doc-page" id="part-1">
+    <div class="part">
+      <div class="pnum">Part one</div>
+      <h2>What a commit actually is</h2>
+      <p class="lede">Every confusing thing git does becomes obvious once three objects are clear:
+        a commit, a branch, and <code>HEAD</code>. Rebase, reset and merge are all just these three
+        moving.</p>
+    </div>
+
+    <section>
+      <div class="eyebrow">The three objects</div>
+      <h2>Snapshot, label, pointer</h2>
+
+      <div class="kv">
+        <div>
+          <span class="k2">a commit</span>
+          <span class="v2">A full snapshot of the tree, plus a pointer to its parent, plus author
+            and message. Its hash is computed from all of that. Change any part and it is a
+            <em>different commit</em> with a different hash. Commits are never edited, only
+            replaced.</span>
+        </div>
+        <div>
+          <span class="k2">a branch</span>
+          <span class="v2">A movable label pointing at one commit. That is the whole implementation
+            &mdash; a file containing a hash. This is why branching is instant and why deleting a
+            branch deletes no commits.</span>
+        </div>
+        <div>
+          <span class="k2">HEAD</span>
+          <span class="v2">A pointer to the branch you are on. <code>HEAD~1</code> means "one commit
+            back from here", <code>HEAD~3</code> means three back.</span>
+        </div>
+      </div>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">three commits on one branch</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 96" role="img" aria-label="three commits on one branch">
+          <line class="edge" x1="72" y1="48" x2="140" y2="48"/>
+          <line class="edge" x1="164" y1="48" x2="232" y2="48"/>
+          <line class="edge" x1="256" y1="48" x2="324" y2="48"/>
+          <circle class="node node-base" cx="60" cy="48" r="8"/>
+          <text class="hash" x="60" y="72" text-anchor="middle">a1b2c3</text>
+          <circle class="node node-base" cx="152" cy="48" r="8"/>
+          <text class="hash" x="152" y="72" text-anchor="middle">d4e5f6</text>
+          <circle class="node" cx="244" cy="48" r="8"/>
+          <text class="hash" x="244" y="72" text-anchor="middle">7g8h9i</text>
+          <circle class="node node-new" cx="336" cy="48" r="8"/>
+          <text class="hash" x="336" y="72" text-anchor="middle">01890bb</text>
+          <text class="tip" x="336" y="31" text-anchor="middle">main &larr; HEAD</text>
+          <text class="faded" x="244" y="31" text-anchor="middle">HEAD~1</text>
+        </svg>
+        <p class="gfoot">A branch is a label on the newest commit; <code>HEAD</code> says which label you are standing on. <code>HEAD~1</code> counts backwards from there.</p>
+      </div>
+
+      <div class="note">
+        <strong>Arrows point backwards.</strong> Each commit knows its parent; no commit knows its
+        children. That single fact explains why git can rewrite recent history cheaply but has to
+        rebuild everything after the point you touch.
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">The core idea</div>
+      <h2>Rebase replays, it does not move</h2>
+      <p class="measure">The word "rebase" suggests picking your commits up and setting them down
+        elsewhere. That is not what happens. Git takes the <em>changes</em> your commits introduced,
+        applies them one at a time on top of the new base, and creates <strong>brand new
+        commits</strong> with new hashes. The originals are abandoned, not relocated.</p>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">before &mdash; you branched, then main moved on</span><span class="gon">on <b>feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 140" role="img" aria-label="before &mdash; you branched, then main moved on">
+          <line class="edge" x1="62" y1="100" x2="130" y2="100"/>
+          <line class="edge" x1="154" y1="100" x2="222" y2="100"/>
+          <line class="edge" x1="246" y1="100" x2="314" y2="100"/>
+          <circle class="node node-base" cx="50" cy="100" r="8"/>
+          <text class="hash" x="50" y="124" text-anchor="middle">c1</text>
+          <circle class="node node-base" cx="142" cy="100" r="8"/>
+          <text class="hash" x="142" y="124" text-anchor="middle">c2</text>
+          <circle class="node" cx="234" cy="100" r="8"/>
+          <text class="hash" x="234" y="124" text-anchor="middle">c3</text>
+          <circle class="node" cx="326" cy="100" r="8"/>
+          <text class="hash" x="326" y="124" text-anchor="middle">c4</text>
+          <line class="edge" x1="246" y1="42" x2="314" y2="42"/>
+          <circle class="node node-new" cx="234" cy="42" r="8"/>
+          <text class="hash" x="234" y="66" text-anchor="middle">f1</text>
+          <circle class="node node-new" cx="326" cy="42" r="8"/>
+          <text class="hash" x="326" y="66" text-anchor="middle">f2</text>
+          <path class="edge-new" d="M150 92 C 187.0 92, 187.0 42, 224 42"/>
+          <text class="tip" x="326" y="122" text-anchor="middle">main</text>
+          <text class="tip" x="326" y="25" text-anchor="middle">feature</text>
+          <text class="faded" x="142" y="83" text-anchor="middle">branch point</text>
+        </svg>
+        <p class="gfoot">Two lines of work sharing a common ancestor. This is the situation rebase and merge both exist to resolve.</p>
+      </div>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">after git rebase main &mdash; f1 and f2 are gone, f1&prime; and f2&prime; are new</span><span class="gon">on <b>feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 165" role="img" aria-label="after git rebase main &mdash; f1 and f2 are gone, f1&prime; and f2&prime; are new">
+          <line class="edge" x1="62" y1="62" x2="130" y2="62"/>
+          <line class="edge" x1="154" y1="62" x2="222" y2="62"/>
+          <line class="edge" x1="246" y1="62" x2="314" y2="62"/>
+          <line class="edge" x1="338" y1="62" x2="406" y2="62"/>
+          <line class="edge" x1="430" y1="62" x2="498" y2="62"/>
+          <circle class="node node-base" cx="50" cy="62" r="8"/>
+          <text class="hash" x="50" y="86" text-anchor="middle">c1</text>
+          <circle class="node node-base" cx="142" cy="62" r="8"/>
+          <text class="hash" x="142" y="86" text-anchor="middle">c2</text>
+          <circle class="node" cx="234" cy="62" r="8"/>
+          <text class="hash" x="234" y="86" text-anchor="middle">c3</text>
+          <circle class="node" cx="326" cy="62" r="8"/>
+          <text class="hash" x="326" y="86" text-anchor="middle">c4</text>
+          <circle class="node node-new" cx="418" cy="62" r="8"/>
+          <text class="hash" x="418" y="86" text-anchor="middle">f1'</text>
+          <circle class="node node-new" cx="510" cy="62" r="8"/>
+          <text class="hash" x="510" y="86" text-anchor="middle">f2'</text>
+          <text class="tip" x="326" y="45" text-anchor="middle">main</text>
+          <text class="tip" x="510" y="45" text-anchor="middle">feature</text>
+          <line class="edge-gone" x1="246" y1="128" x2="314" y2="128"/>
+          <circle class="node node-gone" cx="234" cy="128" r="8"/>
+          <text class="faded" x="234" y="152" text-anchor="middle">f1</text>
+          <circle class="node node-gone" cx="326" cy="128" r="8"/>
+          <text class="faded" x="326" y="152" text-anchor="middle">f2</text>
+          <text class="faded" x="372" y="132" text-anchor="middle">unreachable, still in reflog</text>
+        </svg>
+        <p class="gfoot">Same changes, different parents, therefore different hashes. The originals are abandoned rather than moved.</p>
+      </div>
+
+      <p class="measure">The result is a straight line: it now looks as though you started your work
+        <em>after</em> everything on main, rather than alongside it. Same changes, different parents,
+        different hashes.</p>
+    </section>
+
+    <section>
+      <div class="eyebrow">The choice</div>
+      <h2>Rebase or merge</h2>
+      <p class="measure">Both integrate main into your branch. They differ in what the history looks
+        like afterwards and in whether existing commits survive.</p>
+
+      <div class="split">
+        <div class="card safe">
+          <h3>git rebase main</h3>
+          <p>Linear history, no merge commit. Your commits are rewritten with new hashes. Best for a
+            branch only you have, before opening a PR.</p>
+        </div>
+        <div class="card warn">
+          <h3>git merge main</h3>
+          <p>Adds one merge commit joining the two lines. Nothing is rewritten, every hash survives.
+            Best when others have your branch, or when you want the branch point preserved.</p>
+        </div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">git merge main &mdash; one new commit joins the two lines</span><span class="gon">on <b>feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 150" role="img" aria-label="git merge main &mdash; one new commit joins the two lines">
+          <line class="edge" x1="62" y1="100" x2="130" y2="100"/>
+          <line class="edge" x1="154" y1="100" x2="222" y2="100"/>
+          <line class="edge" x1="246" y1="100" x2="314" y2="100"/>
+          <circle class="node node-base" cx="50" cy="100" r="8"/>
+          <text class="hash" x="50" y="124" text-anchor="middle">c1</text>
+          <circle class="node node-base" cx="142" cy="100" r="8"/>
+          <text class="hash" x="142" y="124" text-anchor="middle">c2</text>
+          <circle class="node" cx="234" cy="100" r="8"/>
+          <text class="hash" x="234" y="124" text-anchor="middle">c3</text>
+          <circle class="node" cx="326" cy="100" r="8"/>
+          <text class="hash" x="326" y="124" text-anchor="middle">c4</text>
+          <line class="edge" x1="246" y1="42" x2="314" y2="42"/>
+          <circle class="node" cx="234" cy="42" r="8"/>
+          <text class="hash" x="234" y="66" text-anchor="middle">f1</text>
+          <circle class="node" cx="326" cy="42" r="8"/>
+          <text class="hash" x="326" y="66" text-anchor="middle">f2</text>
+          <path class="edge-new" d="M150 92 C 187.0 92, 187.0 42, 224 42"/>
+          <path class="edge-new" d="M334 42 C 423.0 42, 423.0 100, 512 100"/>
+          <circle class="node node-new" cx="522" cy="100" r="8"/>
+          <text class="tip" x="522" y="83" text-anchor="middle">merge commit</text>
+          <text class="tip" x="326" y="122" text-anchor="middle">main</text>
+          <text class="tip" x="326" y="25" text-anchor="middle">feature</text>
+        </svg>
+        <p class="gfoot">Nothing is rewritten. Every original hash survives and the branch point stays visible in the history.</p>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">git rebase main &mdash; replayed on the tip, new hashes</span><span class="gon">on <b>feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 112" role="img" aria-label="git rebase main &mdash; replayed on the tip, new hashes">
+          <line class="edge" x1="62" y1="62" x2="130" y2="62"/>
+          <line class="edge" x1="154" y1="62" x2="222" y2="62"/>
+          <line class="edge" x1="246" y1="62" x2="314" y2="62"/>
+          <line class="edge" x1="338" y1="62" x2="406" y2="62"/>
+          <line class="edge" x1="430" y1="62" x2="498" y2="62"/>
+          <circle class="node node-base" cx="50" cy="62" r="8"/>
+          <text class="hash" x="50" y="86" text-anchor="middle">c1</text>
+          <circle class="node node-base" cx="142" cy="62" r="8"/>
+          <text class="hash" x="142" y="86" text-anchor="middle">c2</text>
+          <circle class="node" cx="234" cy="62" r="8"/>
+          <text class="hash" x="234" y="86" text-anchor="middle">c3</text>
+          <circle class="node" cx="326" cy="62" r="8"/>
+          <text class="hash" x="326" y="86" text-anchor="middle">c4</text>
+          <circle class="node node-new" cx="418" cy="62" r="8"/>
+          <text class="hash" x="418" y="86" text-anchor="middle">f1'</text>
+          <circle class="node node-new" cx="510" cy="62" r="8"/>
+          <text class="hash" x="510" y="86" text-anchor="middle">f2'</text>
+          <text class="tip" x="326" y="45" text-anchor="middle">main</text>
+          <text class="tip" x="510" y="45" text-anchor="middle">feature</text>
+        </svg>
+        <p class="gfoot">Linear. <code>f1</code> and <code>f2</code> no longer exist: <code>f1&prime;</code> and <code>f2&prime;</code> are new commits carrying the same changes.</p>
+      </div>
+
+      <div class="note">
+        <strong>The golden rule.</strong> Never rebase commits that other people have already
+        pulled. Rebasing replaces them, so everyone else still has the originals and git will try to
+        reconcile two versions of the same work. On your own feature branch, rebase freely.
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Doing it</div>
+      <h2>The everyday rebase</h2>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git fetch origin</div>
+        <div class="cmd-body"><p>Updates your <code>origin/*</code> refs. Changes nothing in your
+          working tree, so it is always safe.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git fetch origin &mdash; only your origin/* pointers move</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 92" role="img" aria-label="git fetch origin &mdash; only your origin/* pointers move">
+          <line class="edge" x1="62" y1="48" x2="130" y2="48"/>
+          <line class="edge" x1="154" y1="48" x2="222" y2="48"/>
+          <line class="edge" x1="246" y1="48" x2="314" y2="48"/>
+          <circle class="node node-base" cx="50" cy="48" r="8"/>
+          <text class="hash" x="50" y="72" text-anchor="middle">c1</text>
+          <circle class="node node-base" cx="142" cy="48" r="8"/>
+          <text class="hash" x="142" y="72" text-anchor="middle">c2</text>
+          <circle class="node" cx="234" cy="48" r="8"/>
+          <text class="hash" x="234" y="72" text-anchor="middle">c3</text>
+          <circle class="node node-new" cx="326" cy="48" r="8"/>
+          <text class="hash" x="326" y="72" text-anchor="middle">c4</text>
+          <text class="tip" x="326" y="31" text-anchor="middle">origin/main</text>
+        </svg>
+        <p class="gfoot">Your branch and your files do not move at all. Only the <code>origin/*</code> pointers catch up, which is why fetch is always safe to run.</p>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git rebase origin/main</div>
+        <div class="cmd-body"><p>Replays your branch's commits on top of the latest main, one at a
+          time, oldest first.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git rebase origin/main &mdash; after</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 105" role="img" aria-label="git rebase origin/main &mdash; after">
+          <line class="edge" x1="62" y1="55" x2="130" y2="55"/>
+          <line class="edge" x1="154" y1="55" x2="222" y2="55"/>
+          <line class="edge" x1="246" y1="55" x2="314" y2="55"/>
+          <circle class="node node-base" cx="50" cy="55" r="8"/>
+          <text class="hash" x="50" y="79" text-anchor="middle">c3</text>
+          <circle class="node node-base" cx="142" cy="55" r="8"/>
+          <text class="hash" x="142" y="79" text-anchor="middle">c4</text>
+          <circle class="node node-new" cx="234" cy="55" r="8"/>
+          <text class="hash" x="234" y="79" text-anchor="middle">f1'</text>
+          <circle class="node node-new" cx="326" cy="55" r="8"/>
+          <text class="hash" x="326" y="79" text-anchor="middle">f2'</text>
+          <text class="tip" x="142" y="38" text-anchor="middle">origin/main</text>
+          <text class="tip" x="326" y="38" text-anchor="middle">my-feature</text>
+        </svg>
+        <p class="gfoot">Your commits are rebuilt one at a time, oldest first, on top of the fetched main.</p>
+      </div>
+
+      <p class="measure">If a replay hits a conflict, git stops mid-rebase and hands you the working
+        tree to fix. You have three ways out, and they matter:</p>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">what it does</span></div>
+        <div class="annot-row"><span class="o">git rebase --continue</span><span class="m">You fixed the conflict and ran <code>git add</code>. Carry on with the next commit.</span></div>
+        <div class="annot-row"><span class="o">git rebase --skip</span><span class="m">Drop the commit being replayed entirely. Correct when its change is already present upstream.</span></div>
+        <div class="annot-row"><span class="o">git rebase --abort</span><span class="m">Give up and put everything back exactly as it was. Nothing is lost.</span></div>
+      </div>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">a conflict stops the replay part-way</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 118" role="img" aria-label="a conflict stops the replay part-way">
+          <line class="edge" x1="62" y1="52" x2="130" y2="52"/>
+          <line class="edge-gone" x1="154" y1="52" x2="222" y2="52"/>
+          <circle class="node node-base" cx="50" cy="52" r="8"/>
+          <text class="hash" x="50" y="76" text-anchor="middle">c4</text>
+          <circle class="node node-new" cx="142" cy="52" r="8"/>
+          <text class="hash" x="142" y="76" text-anchor="middle">f1'</text>
+          <circle class="node node-gone" cx="234" cy="52" r="8"/>
+          <text class="faded" x="234" y="76" text-anchor="middle">f2</text>
+          <text class="faded" x="234" y="90" text-anchor="middle">paused here</text>
+          <text class="tip" x="234" y="35" text-anchor="middle">conflict</text>
+        </svg>
+        <p class="gfoot"><code>--continue</code> after fixing and staging &middot; <code>--skip</code> drops <code>f2</code> entirely &middot; <code>--abort</code> restores everything from before the rebase.</p>
+      </div>
+
+      <p class="measure"><code>--abort</code> is the one to remember. Any time a rebase turns
+        confusing, aborting returns you to the state before you started, and you can try a merge
+        instead.</p>
+
+      <h3>Pulling with rebase</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="sprint2">git pull --rebase</div>
+        <div class="cmd-body"><p>Fetch, then replay your local commits on top of what you fetched,
+          instead of creating a merge commit. This is what keeps a shared branch's history from
+          filling with "Merge branch main into main" noise.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git pull --rebase &mdash; fetch, then replay yours on top</span><span class="gon">on <b>sprint2</b></span></div>
+        <svg class="graph" viewBox="0 0 620 105" role="img" aria-label="git pull --rebase &mdash; fetch, then replay yours on top">
+          <line class="edge" x1="62" y1="55" x2="130" y2="55"/>
+          <line class="edge" x1="154" y1="55" x2="222" y2="55"/>
+          <line class="edge" x1="246" y1="55" x2="314" y2="55"/>
+          <line class="edge" x1="338" y1="55" x2="406" y2="55"/>
+          <line class="edge" x1="430" y1="55" x2="498" y2="55"/>
+          <circle class="node node-base" cx="50" cy="55" r="8"/>
+          <text class="hash" x="50" y="79" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="55" r="8"/>
+          <text class="hash" x="142" y="79" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="55" r="8"/>
+          <text class="hash" x="234" y="79" text-anchor="middle">r1</text>
+          <circle class="node" cx="326" cy="55" r="8"/>
+          <text class="hash" x="326" y="79" text-anchor="middle">r2</text>
+          <circle class="node node-new" cx="418" cy="55" r="8"/>
+          <text class="hash" x="418" y="79" text-anchor="middle">m1'</text>
+          <circle class="node node-new" cx="510" cy="55" r="8"/>
+          <text class="hash" x="510" y="79" text-anchor="middle">m2'</text>
+          <text class="tip" x="326" y="38" text-anchor="middle">fetched</text>
+          <text class="tip" x="510" y="38" text-anchor="middle">yours, replayed</text>
+        </svg>
+        <p class="gfoot">No merge commit. Your local commits are rebuilt on top of what you fetched, which keeps a shared branch free of "Merge branch sprint2" noise.</p>
+      </div>
+
+      <h3>When you and main have both moved</h3>
+      <p class="measure">The most common git wall on a shared branch. You committed on
+        <code>main</code>, someone else pushed to <code>main</code> first, and now your push
+        bounces. Two different messages describe the same situation:</p>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">what git says</span><span class="m">what it means</span></div>
+        <div class="annot-row"><span class="o">! [rejected] main -&gt; main (non-fast-forward)
+Updates were rejected because the tip
+of your current branch is behind</span><span class="m">On <code>push</code>. The wording is misleading: you are usually <em>diverged</em>, not simply behind. Both of you added commits.</span></div>
+        <div class="annot-row"><span class="o">hint: You have divergent branches and need
+hint: to specify how to reconcile them.</span><span class="m">On <code>pull</code>, when git has no configured preference for merging or rebasing.</span></div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">why the push was rejected</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="why the push was rejected">
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">base</text>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <circle class="node" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">r1</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">r2</text>
+          <text class="tip" x="234" y="28" text-anchor="middle">origin/main</text>
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <circle class="node node-new" cx="142" cy="128" r="8"/>
+          <text class="hash" x="142" y="152" text-anchor="middle">mine</text>
+          <path class="edge-new" d="M58 53 C 95.0 53, 95.0 128, 132 128"/>
+          <text class="tip" x="142" y="111" text-anchor="middle">main, yours</text>
+          <text class="faded" x="400" y="132" text-anchor="middle">push rejected: your line is not a continuation of theirs</text>
+        </svg>
+        <p class="gfoot">You both started from <code>base</code>. A normal push can only fast-forward, meaning add commits on the end of what is already there. Your <code>main</code> is not on the end of theirs, so git refuses rather than throwing their work away.</p>
+      </div>
+
+      <p class="measure">Confirm it is a divergence rather than a simple "behind" before you decide
+        anything:</p>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git fetch origin &amp;&amp; git status -sb</div>
+        <div class="cmd-body"><p>Prints something like
+          <code>## main...origin/main [ahead 1, behind 2]</code>. <b>Both</b> numbers non-zero means
+          diverged. Only <code>behind</code> means a plain <code>git pull</code> is all you need.</p></div>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git pull --rebase</div>
+        <div class="cmd-body"><p>Takes their two commits as the new base and replays yours on top.
+          Your commit gets a new hash; theirs are untouched.</p></div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">after git pull --rebase &mdash; one line again</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 105" role="img" aria-label="after git pull --rebase &mdash; one line again">
+          <line class="edge" x1="62" y1="55" x2="130" y2="55"/>
+          <line class="edge" x1="154" y1="55" x2="222" y2="55"/>
+          <line class="edge" x1="246" y1="55" x2="314" y2="55"/>
+          <circle class="node node-base" cx="50" cy="55" r="8"/>
+          <text class="hash" x="50" y="79" text-anchor="middle">base</text>
+          <circle class="node node-base" cx="142" cy="55" r="8"/>
+          <text class="hash" x="142" y="79" text-anchor="middle">r1</text>
+          <circle class="node node-base" cx="234" cy="55" r="8"/>
+          <text class="hash" x="234" y="79" text-anchor="middle">r2</text>
+          <circle class="node node-new" cx="326" cy="55" r="8"/>
+          <text class="hash" x="326" y="79" text-anchor="middle">mine'</text>
+          <text class="tip" x="234" y="38" text-anchor="middle">their work, kept</text>
+          <text class="tip" x="326" y="38" text-anchor="middle">main &larr; HEAD</text>
+        </svg>
+        <p class="gfoot">Your commit was replayed on top of theirs and now has a new hash. The branch fast-forwards cleanly, so <code>git push</code> works with no force and nobody loses anything.</p>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git push origin main</div>
+        <div class="cmd-body"><p>Now a fast-forward, so it just works. No force, no flags.</p></div>
+      </div>
+
+      <div class="note">
+        <strong>Do not force-push here.</strong> This looks like the force-with-lease case from
+        part two, and it is the opposite. There you were rewriting <em>your own</em> feature branch.
+        Here <code>main</code> is shared, and forcing would delete your teammate's two commits from
+        the remote. If a push to a shared branch is rejected, the answer is always to integrate
+        their work, never to overwrite it.
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git config --global pull.rebase true</div>
+        <div class="cmd-body"><p>Set once. Makes <code>git pull</code> rebase by default, so the
+          "divergent branches" hint stops appearing and you stop accumulating merge commits on
+          shared branches.</p></div>
+      </div>
+
+      <p class="measure">If the replay hits a conflict, it is the ordinary rebase conflict from
+        earlier in this page: fix the file, <code>git add</code> it, then
+        <code>git rebase --continue</code>. <code>git rebase --abort</code> puts you back to the
+        rejected-push state with nothing lost.</p>
+
+      <h3>Interactive rebase: tidying before a PR</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git rebase -i HEAD~4</div>
+        <div class="cmd-body"><p>Opens an editor listing your last four commits, oldest at the top.
+          Change the word at the start of a line to change what happens to that commit, save, and
+          close.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">squash / fixup &mdash; three commits become one</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 168" role="img" aria-label="squash / fixup &mdash; three commits become one">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <line class="edge" x1="246" y1="45" x2="314" y2="45"/>
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">a</text>
+          <circle class="node" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">c</text>
+          <circle class="node" cx="326" cy="45" r="8"/>
+          <text class="hash" x="326" y="69" text-anchor="middle">d</text>
+          <text class="cap" x="610" y="49" text-anchor="end">before</text>
+          <line class="edge" x1="62" y1="128" x2="130" y2="128"/>
+          <circle class="node node-base" cx="50" cy="128" r="8"/>
+          <text class="hash" x="50" y="152" text-anchor="middle">a</text>
+          <circle class="node node-new" cx="142" cy="128" r="8"/>
+          <text class="hash" x="142" y="152" text-anchor="middle">b+c+d</text>
+          <text class="cap" x="610" y="132" text-anchor="end">after squash</text>
+        </svg>
+        <p class="gfoot"><b>squash</b> keeps every change and lets you combine the messages. <b>fixup</b> is identical except it throws the folded-in messages away, which is what you want for "fix typo" commits.</p>
+      </div>
+
+      <p class="measure">There is no <code>git squash</code> command. This is the whole
+        mechanism: git opens a file listing your commits, and <strong>you edit the word at the
+        start of each line</strong>. Save and close, and git carries out what you wrote.</p>
+
+      <div class="split">
+        <div class="card">
+          <h3>1. What git opens</h3>
+          <pre class="plain">pick a1b2c3 add ride schema
+pick d4e5f6 fix typo
+pick 7g8h9i wip
+pick 01890bb address review</pre>
+          <p>Oldest at the top, which is the opposite of <code>git log</code>. Every line starts as
+            <code>pick</code>.</p>
+        </div>
+        <div class="card safe">
+          <h3>2. What you change it to</h3>
+          <pre><span class="k">pick</span>   a1b2c3 add ride schema
+<span class="k">fixup</span>  d4e5f6 fix typo
+<span class="k">fixup</span>  7g8h9i wip
+<span class="k">reword</span> 01890bb address review</pre>
+          <p>Two commits folded into the first, and the last one kept with a better message. Four
+            commits become two.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>squash or fixup?</strong> Both fold the commit upward. <code>squash</code> opens an
+        editor so you can combine the messages; <code>fixup</code> silently discards the folded-in
+        message. For "fix typo" and "wip" commits you almost always want <code>fixup</code>, because
+        their messages are worth nothing in the final history.
+      </div>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">keyword</span><span class="m">effect</span></div>
+        <div class="annot-row"><span class="o">pick</span><span class="m">Keep it as is. The default for every line.</span></div>
+        <div class="annot-row"><span class="o">reword</span><span class="m">Keep the changes, edit the message.</span></div>
+        <div class="annot-row"><span class="o">squash</span><span class="m">Fold into the commit above, and combine both messages.</span></div>
+        <div class="annot-row"><span class="o">fixup</span><span class="m">Fold into the commit above and discard this message. What you want for "fix typo" commits.</span></div>
+        <div class="annot-row"><span class="o">drop</span><span class="m">Delete the commit and its changes.</span></div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">drop &mdash; and why the commits after it change hash too</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 178" role="img" aria-label="drop &mdash; and why the commits after it change hash too">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge-gone" x1="154" y1="45" x2="222" y2="45"/>
+          <line class="edge-gone" x1="246" y1="45" x2="314" y2="45"/>
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">a</text>
+          <circle class="node" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">b</text>
+          <circle class="node node-gone" cx="234" cy="45" r="8"/>
+          <text class="faded" x="234" y="69" text-anchor="middle">c</text>
+          <text class="faded" x="234" y="83" text-anchor="middle">drop this one</text>
+          <circle class="node" cx="326" cy="45" r="8"/>
+          <text class="hash" x="326" y="69" text-anchor="middle">d</text>
+          <text class="cap" x="610" y="49" text-anchor="end">before</text>
+          <line class="edge" x1="62" y1="138" x2="130" y2="138"/>
+          <line class="edge" x1="154" y1="138" x2="222" y2="138"/>
+          <circle class="node node-base" cx="50" cy="138" r="8"/>
+          <text class="hash" x="50" y="162" text-anchor="middle">a</text>
+          <circle class="node node-new" cx="142" cy="138" r="8"/>
+          <text class="hash" x="142" y="162" text-anchor="middle">b'</text>
+          <circle class="node node-new" cx="234" cy="138" r="8"/>
+          <text class="hash" x="234" y="162" text-anchor="middle">d'</text>
+          <text class="cap" x="610" y="142" text-anchor="end">after drop</text>
+        </svg>
+        <p class="gfoot">You only edited <code>c</code>, yet <code>d</code> became <code>d&prime;</code>. Every commit after the one you touched is rebuilt, because a commit’s hash includes its parent.</p>
+      </div>
+
+      <p class="measure">Deleting a line does the same as <code>drop</code>. Reordering lines
+        reorders the commits. Since every commit after the first change gets rebuilt, this is
+        rewriting history, so the golden rule applies.</p>
+    </section>
+    <div class="pagers"><span></span><a class="pager next" href="#part-2"><span class="dir">next &rarr;</span><span class="t">Undoing things</span></a></div>
+  </article>
+  <article class="doc-page" id="part-2">
+    <div class="part">
+      <div class="pnum">Part two</div>
+      <h2>Undoing things</h2>
+      <p class="lede">Most git panic comes from not knowing which of the three resets you want.
+        They differ in exactly one way: how much they throw away.</p>
+    </div>
+
+    <section>
+      <div class="eyebrow">The three trees</div>
+      <h2>Where your changes live</h2>
+      <p class="measure">Every undo command is described in terms of these three. Learn them once
+        and reset stops being frightening.</p>
+
+      <div class="kv">
+        <div>
+          <span class="k2">working tree</span>
+          <span class="v2">The files on disk, as your editor sees them.</span>
+        </div>
+        <div>
+          <span class="k2">index (staging area)</span>
+          <span class="v2">What you have run <code>git add</code> on. The draft of your next commit.</span>
+        </div>
+        <div>
+          <span class="k2">HEAD</span>
+          <span class="v2">The last commit. What <code>git add</code> is measured against.</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Reset</div>
+      <h2>Soft, mixed, hard</h2>
+      <p class="measure">All three move the branch pointer to the commit you name. They differ only
+        in whether they also wipe the index and the working tree.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>&nbsp;</th><th>moves HEAD</th><th>clears index</th><th>deletes your edits</th><th>use when</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">--soft</td><td>yes</td><td>no</td><td>no</td>
+              <td>Wrong message, forgot a file, not ready to commit yet.</td>
+            </tr>
+            <tr>
+              <td class="mono">--mixed <span style="color:var(--ink-3)">(default)</span></td><td>yes</td><td>yes</td><td>no</td>
+              <td>You want to re-choose what goes in the commit.</td>
+            </tr>
+            <tr>
+              <td class="mono">--hard</td><td>yes</td><td>yes</td><td><b style="color:var(--reject)">yes</b></td>
+              <td>You genuinely want the work gone. Nothing warns you.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Undoing the last commit, keeping the work</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git reset --soft HEAD~1</div>
+        <div class="cmd-body">
+          <p>The commit stops existing. Every file it contained is still staged, exactly as it was a
+            moment before you committed. Run <code>git commit</code> again with a better message, or
+            stage more first.</p>
+        </div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git reset --soft HEAD~1</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 96" role="img" aria-label="git reset --soft HEAD~1">
+          <line class="edge" x1="62" y1="48" x2="130" y2="48"/>
+          <line class="edge" x1="154" y1="48" x2="222" y2="48"/>
+          <line class="edge-gone" x1="246" y1="48" x2="314" y2="48"/>
+          <circle class="node node-base" cx="50" cy="48" r="8"/>
+          <text class="hash" x="50" y="72" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="48" r="8"/>
+          <text class="hash" x="142" y="72" text-anchor="middle">b</text>
+          <circle class="node node-new" cx="234" cy="48" r="8"/>
+          <text class="hash" x="234" y="72" text-anchor="middle">50b793a</text>
+          <circle class="node node-gone" cx="326" cy="48" r="8"/>
+          <text class="faded" x="326" y="72" text-anchor="middle">1b81d8d</text>
+          <text class="tip" x="234" y="31" text-anchor="middle">HEAD</text>
+          <text class="faded" x="326" y="31" text-anchor="middle">abandoned</text>
+        </svg>
+        <p class="gfoot">The commit is gone but everything it contained is still <b>staged</b>, exactly as it was a moment before you committed.</p>
+      </div>
+
+      <p class="measure">Two neighbours worth knowing, because they are shorter for the common case:</p>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">when</span></div>
+        <div class="annot-row"><span class="o">git commit --amend</span><span class="m">Fix the last commit's message or add a forgotten file, in one step. Same rewrite, less typing.</span></div>
+        <div class="annot-row"><span class="o">git reset HEAD~1</span><span class="m">Mixed. Commit gone, changes kept but unstaged, so you can re-select what belongs.</span></div>
+        <div class="annot-row"><span class="o">git restore --staged &lt;file&gt;</span><span class="m">Unstage one file without touching commits at all.</span></div>
+      </div>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git reset --mixed HEAD~1</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 96" role="img" aria-label="git reset --mixed HEAD~1">
+          <line class="edge" x1="62" y1="48" x2="130" y2="48"/>
+          <line class="edge" x1="154" y1="48" x2="222" y2="48"/>
+          <line class="edge-gone" x1="246" y1="48" x2="314" y2="48"/>
+          <circle class="node node-base" cx="50" cy="48" r="8"/>
+          <text class="hash" x="50" y="72" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="48" r="8"/>
+          <text class="hash" x="142" y="72" text-anchor="middle">b</text>
+          <circle class="node node-new" cx="234" cy="48" r="8"/>
+          <text class="hash" x="234" y="72" text-anchor="middle">50b793a</text>
+          <circle class="node node-gone" cx="326" cy="48" r="8"/>
+          <text class="faded" x="326" y="72" text-anchor="middle">1b81d8d</text>
+          <text class="tip" x="234" y="31" text-anchor="middle">HEAD</text>
+          <text class="faded" x="326" y="31" text-anchor="middle">abandoned</text>
+        </svg>
+        <p class="gfoot">Same pointer move, but the index is cleared too: your changes are still in your files, just <b>unstaged</b>.</p>
+      </div>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git commit --amend &mdash; replaces, never edits</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 100" role="img" aria-label="git commit --amend &mdash; replaces, never edits">
+          <line class="edge" x1="62" y1="52" x2="130" y2="52"/>
+          <line class="edge-gone" x1="154" y1="52" x2="222" y2="52"/>
+          <line class="edge-gone" x1="246" y1="52" x2="314" y2="52"/>
+          <circle class="node node-base" cx="50" cy="52" r="8"/>
+          <text class="hash" x="50" y="76" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="52" r="8"/>
+          <text class="hash" x="142" y="76" text-anchor="middle">b</text>
+          <circle class="node node-gone" cx="234" cy="52" r="8"/>
+          <text class="faded" x="234" y="76" text-anchor="middle">c</text>
+          <circle class="node node-new" cx="326" cy="52" r="8"/>
+          <text class="hash" x="326" y="76" text-anchor="middle">c'</text>
+          <path class="edge-new" d="M150 52 C 233.0 52, 233.0 52, 316 52"/>
+          <text class="tip" x="326" y="35" text-anchor="middle">HEAD</text>
+          <text class="faded" x="234" y="35" text-anchor="middle">replaced</text>
+        </svg>
+        <p class="gfoot">A one-commit rebase. The old commit is abandoned and a new one takes its place, so the hash changes and the golden rule applies.</p>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">git reset --hard HEAD~1</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 96" role="img" aria-label="git reset --hard HEAD~1">
+          <line class="edge" x1="62" y1="48" x2="130" y2="48"/>
+          <line class="edge" x1="154" y1="48" x2="222" y2="48"/>
+          <line class="edge-gone" x1="246" y1="48" x2="314" y2="48"/>
+          <circle class="node node-base" cx="50" cy="48" r="8"/>
+          <text class="hash" x="50" y="72" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="48" r="8"/>
+          <text class="hash" x="142" y="72" text-anchor="middle">b</text>
+          <circle class="node node-new" cx="234" cy="48" r="8"/>
+          <text class="hash" x="234" y="72" text-anchor="middle">50b793a</text>
+          <circle class="node node-gone" cx="326" cy="48" r="8"/>
+          <text class="faded" x="326" y="72" text-anchor="middle">1b81d8d</text>
+          <text class="tip" x="234" y="31" text-anchor="middle">HEAD</text>
+          <text class="faded" x="326" y="31" text-anchor="middle">abandoned</text>
+        </svg>
+        <p class="gfoot">Pointer, index <em>and</em> your files. The edits are <b>deleted</b>. Recoverable through the reflog only because the work had been committed once.</p>
+      </div>
+
+      <div class="note">
+        <strong>Reset rewrites history; revert does not.</strong> If the commit has already been
+        pushed and others may have it, use <code>git revert &lt;hash&gt;</code>. That creates a
+        <em>new</em> commit undoing the old one, so nobody's history changes underneath them.
+      </div>
+
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git revert &mdash; safe on pushed commits</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 96" role="img" aria-label="git revert &mdash; safe on pushed commits">
+          <line class="edge" x1="62" y1="48" x2="130" y2="48"/>
+          <line class="edge" x1="154" y1="48" x2="222" y2="48"/>
+          <line class="edge" x1="246" y1="48" x2="314" y2="48"/>
+          <circle class="node node-base" cx="50" cy="48" r="8"/>
+          <text class="hash" x="50" y="72" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="48" r="8"/>
+          <text class="hash" x="142" y="72" text-anchor="middle">b</text>
+          <circle class="node node-base" cx="234" cy="48" r="8"/>
+          <text class="hash" x="234" y="72" text-anchor="middle">bug</text>
+          <circle class="node node-new" cx="326" cy="48" r="8"/>
+          <text class="hash" x="326" y="72" text-anchor="middle">revert bug</text>
+          <text class="tip" x="326" y="31" text-anchor="middle">HEAD</text>
+        </svg>
+        <p class="gfoot">The bad commit stays in history. A new commit undoes its changes, so nobody else’s history is rewritten underneath them.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">The safety net</div>
+      <h2>reflog: nothing is really gone</h2>
+      <p class="measure">Git records every position <code>HEAD</code> has held, including the ones a
+        rebase or reset abandoned. Commits stay recoverable for about 90 days even when no branch
+        points at them.</p>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git reflog</div>
+        <div class="cmd-body"><p>Lists recent HEAD positions, newest first, each with a name you can
+          use like a hash.</p></div>
+      </div>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">output</span><span class="m">meaning</span></div>
+        <div class="annot-row"><span class="o">50b793a HEAD@{0}: reset: moving to HEAD~1</span><span class="m">Where you are now, and how you got here.</span></div>
+        <div class="annot-row"><span class="o">1b81d8d HEAD@{1}: commit: add POST /users/sync</span><span class="m">The commit that reset abandoned. Still fully intact.</span></div>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git reset --hard HEAD@{1}</div>
+        <div class="cmd-body"><p>Puts everything back to before the mistake. This is why
+          <code>--hard</code> is survivable in practice: the reflog remembers, as long as the work
+          was committed at least once.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">reflog recovery &mdash; putting an abandoned commit back</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 110" role="img" aria-label="reflog recovery &mdash; putting an abandoned commit back">
+          <line class="edge" x1="62" y1="48" x2="130" y2="48"/>
+          <line class="edge" x1="154" y1="48" x2="222" y2="48"/>
+          <line class="edge" x1="246" y1="48" x2="314" y2="48"/>
+          <circle class="node node-base" cx="50" cy="48" r="8"/>
+          <text class="hash" x="50" y="72" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="48" r="8"/>
+          <text class="hash" x="142" y="72" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="48" r="8"/>
+          <text class="hash" x="234" y="72" text-anchor="middle">50b793a</text>
+          <circle class="node node-new" cx="326" cy="48" r="8"/>
+          <text class="hash" x="326" y="72" text-anchor="middle">1b81d8d</text>
+          <text class="faded" x="326" y="86" text-anchor="middle">recovered</text>
+          <text class="tip" x="326" y="31" text-anchor="middle">HEAD@{1}</text>
+        </svg>
+        <p class="gfoot">The abandoned commit was never deleted, only left with nothing pointing at it. Git keeps it for about 90 days.</p>
+      </div>
+
+      <div class="note">
+        <strong>Before anything risky, make a free backup.</strong> <code>git branch backup-x</code>
+        pins your current commits under a second name. It costs nothing, and it means you do not have
+        to trust yourself to read reflog correctly while stressed.
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Pushing rewritten history</div>
+      <h2>force-with-lease, never force</h2>
+      <p class="measure">Rebasing or resetting a branch you have already pushed means the remote and
+        your local copy disagree, and a normal push is refused.</p>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-branch">git push --force-with-lease origin my-branch</div>
+        <div class="cmd-body">
+          <p>Overwrites the remote branch, but only if it still points where your last
+            <code>fetch</code> saw it. If a teammate pushed in the meantime, the push is rejected
+            instead of destroying their commit.</p>
+        </div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">pushing rewritten history</span><span class="gon">on <b>my-branch</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="pushing rewritten history">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge-gone" x1="154" y1="45" x2="222" y2="45"/>
+          <line class="edge-gone" x1="246" y1="45" x2="314" y2="45"/>
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">b</text>
+          <circle class="node node-gone" cx="234" cy="45" r="8"/>
+          <text class="faded" x="234" y="69" text-anchor="middle">x</text>
+          <circle class="node node-gone" cx="326" cy="45" r="8"/>
+          <text class="faded" x="326" y="69" text-anchor="middle">y</text>
+          <text class="tip" x="326" y="28" text-anchor="middle">origin, old copies</text>
+          <line class="edge" x1="246" y1="128" x2="314" y2="128"/>
+          <circle class="node node-new" cx="234" cy="128" r="8"/>
+          <text class="hash" x="234" y="152" text-anchor="middle">x'</text>
+          <circle class="node node-new" cx="326" cy="128" r="8"/>
+          <text class="hash" x="326" y="152" text-anchor="middle">y'</text>
+          <path class="edge-new" d="M150 53 C 187.0 53, 187.0 128, 224 128"/>
+          <text class="tip" x="326" y="111" text-anchor="middle">yours, rewritten</text>
+        </svg>
+        <p class="gfoot"><code>--force-with-lease</code> replaces the remote line, but only if it still points where your last fetch saw it. Plain <code>--force</code> skips that check.</p>
+      </div>
+
+      <div class="rule-line"><span class="tag yes">do</span><span><code>--force-with-lease</code>, after a <code>git fetch</code> so the check is meaningful.</span></div>
+      <div class="rule-line"><span class="tag no">avoid</span><span><code>--force</code>. It skips the check and will silently erase work you never saw.</span></div>
+      <div class="rule-line"><span class="tag no">never</span><span>Force-push a shared branch without telling the people on it first.</span></div>
+    </section>
+    <div class="pagers"><a class="pager prev" href="#part-1"><span class="dir">&larr; previous</span><span class="t">What a commit actually is</span></a><a class="pager next" href="#part-3"><span class="dir">next &rarr;</span><span class="t">Inspecting, and reading what you get back</span></a></div>
+  </article>
+  <article class="doc-page" id="part-3">
+    <div class="part">
+      <div class="pnum">Part three</div>
+      <h2>Inspecting, and reading what you get back</h2>
+      <p class="lede">Most git commands answer a question. The trick is knowing which question each
+        one answers, and how to read the answer without guessing.</p>
+    </div>
+
+    <section>
+      <div class="eyebrow">Where am I</div>
+      <h2>status, and what its columns mean</h2>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git status --short</div>
+        <div class="cmd-body"><p>Two columns per line. Left column is the <strong>index</strong>,
+          right column is the <strong>working tree</strong>. This is the part people misread.</p></div>
+      </div>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">line</span><span class="m">meaning</span></div>
+        <div class="annot-row"><span class="o">M  app/main.py</span><span class="m">Modified <em>and staged</em>. M is in the left column. This goes in your next commit.</span></div>
+        <div class="annot-row"><span class="o"> M app/main.py</span><span class="m">Modified, <em>not staged</em>. Note the leading space. This will not be committed.</span></div>
+        <div class="annot-row"><span class="o">MM app/main.py</span><span class="m">Staged, then modified again. The commit gets the earlier version.</span></div>
+        <div class="annot-row"><span class="o">A  app/schemas/user.py</span><span class="m">New file, staged.</span></div>
+        <div class="annot-row"><span class="o">?? app/services/ride.py</span><span class="m">Untracked. Git has never seen it and will not commit it.</span></div>
+        <div class="annot-row"><span class="o">R  src/app/main.py -&gt; app/main.py</span><span class="m">Detected as a rename, not a delete plus an add, so history follows the file.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">What happened</div>
+      <h2>log, shaped to the question</h2>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">answers</span></div>
+        <div class="annot-row"><span class="o">git log --oneline -10</span><span class="m">What are the last ten commits?</span></div>
+        <div class="annot-row"><span class="o">git log --oneline --graph --all</span><span class="m">How do my branches actually relate? The one to run when confused.</span></div>
+        <div class="annot-row"><span class="o">git log --stat -3</span><span class="m">Which files did the recent commits touch, and how much?</span></div>
+        <div class="annot-row"><span class="o">git log -p app/api/deps.py</span><span class="m">Every change ever made to this file, with diffs.</span></div>
+        <div class="annot-row"><span class="o">git log --follow app/main.py</span><span class="m">Same, but keep going across renames.</span></div>
+        <div class="annot-row"><span class="o">git log -S "verify_clerk_token"</span><span class="m">Which commit introduced or removed this string? The best bug-archaeology tool git has.</span></div>
+        <div class="annot-row"><span class="o">git log main..my-branch</span><span class="m">What is on my branch that is not on main? Exactly the PR contents.</span></div>
+        <div class="annot-row"><span class="o">git log --author=michaelwsd --since="2 weeks"</span><span class="m">Scoped by person and time.</span></div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">two dots versus three</span><span class="gon">on <b>my-branch</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="two dots versus three">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <line class="edge" x1="246" y1="45" x2="314" y2="45"/>
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">m1</text>
+          <circle class="node" cx="326" cy="45" r="8"/>
+          <text class="hash" x="326" y="69" text-anchor="middle">m2</text>
+          <text class="tip" x="326" y="28" text-anchor="middle">main</text>
+          <line class="edge" x1="246" y1="128" x2="314" y2="128"/>
+          <circle class="node node-new" cx="234" cy="128" r="8"/>
+          <text class="hash" x="234" y="152" text-anchor="middle">f1</text>
+          <circle class="node node-new" cx="326" cy="128" r="8"/>
+          <text class="hash" x="326" y="152" text-anchor="middle">f2</text>
+          <path class="edge-new" d="M150 53 C 187.0 53, 187.0 128, 224 128"/>
+          <text class="tip" x="326" y="111" text-anchor="middle">my-branch</text>
+        </svg>
+        <p class="gfoot"><code>main..my-branch</code> = f1 f2 &middot; <code>my-branch..main</code> = m1 m2 &middot; <code>main...my-branch</code> = all four.</p>
+      </div>
+
+      <div class="note">
+        <strong>Two dots versus three.</strong> <code>a..b</code> means "on b but not a", a
+        one-directional question. <code>a...b</code> means "on either but not both", which is what
+        you want when two branches have diverged and you need to see it.
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">One commit</div>
+      <h2>show, and reading a diff header</h2>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git show 50b793a</div>
+        <div class="cmd-body"><p>Message, metadata and the full diff for one commit. Add
+          <code>--stat</code> for just the file list.</p></div>
+      </div>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">diff line</span><span class="m">meaning</span></div>
+        <div class="annot-row"><span class="o">diff --git a/x.py b/x.py</span><span class="m">a/ is the before, b/ is the after. Always this pair.</span></div>
+        <div class="annot-row"><span class="o">similarity index 67%</span><span class="m">Git decided this is a renamed file, 67% unchanged.</span></div>
+        <div class="annot-row"><span class="o">@@ -37,7 +52,7 @@</span><span class="m">This hunk was 7 lines starting at line 37 before, and is 7 lines starting at line 52 after.</span></div>
+        <div class="annot-row"><span class="o">-  old line</span><span class="m">Removed.</span></div>
+        <div class="annot-row"><span class="o">+  new line</span><span class="m">Added. A changed line shows as one of each.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Comparing</div>
+      <h2>diff answers a different question depending on the flags</h2>
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">compares</span></div>
+        <div class="annot-row"><span class="o">git diff</span><span class="m">Working tree against the index. What you have changed but not staged.</span></div>
+        <div class="annot-row"><span class="o">git diff --staged</span><span class="m">Index against HEAD. Exactly what your next commit will contain. Run this before every commit.</span></div>
+        <div class="annot-row"><span class="o">git diff HEAD</span><span class="m">Working tree against the last commit. Everything uncommitted, staged or not.</span></div>
+        <div class="annot-row"><span class="o">git diff main...my-branch</span><span class="m">What your branch adds, ignoring anything main gained since you branched. What a reviewer sees.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Divergence</div>
+      <h2>Answering "why was my push rejected"</h2>
+      <p class="measure">When git says your branch is behind, it is often wrong in a useful way: you
+        have usually <em>diverged</em>, which is a different problem with a different fix. Two
+        commands settle it.</p>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git fetch origin &amp;&amp; git rev-list --left-right --count origin/main...main</div>
+        <div class="cmd-body">
+          <p>Prints two numbers: how many commits exist only on the remote, and how many only
+            locally.</p>
+        </div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">diverged: commits on each side that the other lacks</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="diverged: commits on each side that the other lacks">
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">base</text>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <circle class="node" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">r1</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">r2</text>
+          <text class="tip" x="234" y="28" text-anchor="middle">origin/main</text>
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge" x1="154" y1="128" x2="222" y2="128"/>
+          <line class="edge" x1="246" y1="128" x2="314" y2="128"/>
+          <circle class="node node-new" cx="142" cy="128" r="8"/>
+          <text class="hash" x="142" y="152" text-anchor="middle">l1</text>
+          <circle class="node node-new" cx="234" cy="128" r="8"/>
+          <text class="hash" x="234" y="152" text-anchor="middle">l2</text>
+          <circle class="node node-new" cx="326" cy="128" r="8"/>
+          <text class="hash" x="326" y="152" text-anchor="middle">l3</text>
+          <path class="edge-new" d="M58 53 C 95.0 53, 95.0 128, 132 128"/>
+          <text class="tip" x="326" y="111" text-anchor="middle">main, yours</text>
+        </svg>
+        <p class="gfoot"><code>rev-list --left-right --count</code> prints <code>2&nbsp;&nbsp;&nbsp;&nbsp;3</code> here: two only on the remote, three only local. Not "behind" &mdash; diverged.</p>
+      </div>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">output</span><span class="m">situation</span></div>
+        <div class="annot-row"><span class="o">0    3</span><span class="m">You are ahead by 3. A normal push works.</span></div>
+        <div class="annot-row"><span class="o">2    0</span><span class="m">You are behind by 2. <code>git pull</code> is the right advice.</span></div>
+        <div class="annot-row"><span class="o">2    7</span><span class="m">Diverged. Pulling will merge or replay; rebasing or force-with-lease may be what you actually want.</span></div>
+      </div>
+
+      <h3>Same work, different hashes</h3>
+      <p class="measure">After a rebase or an amend, the remote holds old copies of commits you still
+        have locally under new hashes. They look like different commits but contain identical
+        changes. <code>patch-id</code> proves it, by hashing the diff instead of the commit:</p>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git show &lt;hash&gt; | git patch-id --stable</div>
+        <div class="cmd-body"><p>Two commits with the same patch-id introduce exactly the same
+          change. If every remote-only commit matches a local one, force-pushing loses no work.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">same work, different hashes &mdash; proved by patch-id</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 160" role="img" aria-label="same work, different hashes &mdash; proved by patch-id">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <circle class="node" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">ffa8fb7</text>
+          <circle class="node" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">01a4e85</text>
+          <text class="cap" x="610" y="49" text-anchor="end">on the remote</text>
+          <line class="edge" x1="62" y1="122" x2="130" y2="122"/>
+          <circle class="node node-new" cx="50" cy="122" r="8"/>
+          <text class="hash" x="50" y="146" text-anchor="middle">b4488a0</text>
+          <circle class="node node-new" cx="142" cy="122" r="8"/>
+          <text class="hash" x="142" y="146" text-anchor="middle">ea24b90</text>
+          <text class="cap" x="610" y="126" text-anchor="end">on your machine</text>
+        </svg>
+        <p class="gfoot">Different hashes, identical <code>patch-id</code>. The pairs introduce exactly the same change, so force-pushing yours loses nothing.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Blame</div>
+      <h2>Who wrote this line, and why</h2>
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">answers</span></div>
+        <div class="annot-row"><span class="o">git blame app/core/security.py</span><span class="m">Which commit last touched each line.</span></div>
+        <div class="annot-row"><span class="o">git blame -L 35,55 app/api/deps.py</span><span class="m">Same, limited to a line range. Usually what you want.</span></div>
+        <div class="annot-row"><span class="o">git show &lt;hash-from-blame&gt;</span><span class="m">The step that matters. Blame gives you a hash; the commit message gives you the reason.</span></div>
+      </div>
+      <p class="measure">This is the payoff for writing commit messages that explain the decision
+        rather than restate the diff. Blame plus a good message answers "why is this like this" in
+        two commands.</p>
+    </section>
+    <div class="pagers"><a class="pager prev" href="#part-2"><span class="dir">&larr; previous</span><span class="t">Undoing things</span></a><a class="pager next" href="#part-4"><span class="dir">next &rarr;</span><span class="t">Everyday commands and recipes</span></a></div>
+  </article>
+  <article class="doc-page" id="part-4">
+    <div class="part">
+      <div class="pnum">Part four</div>
+      <h2>Everyday commands and recipes</h2>
+      <p class="lede">The commands worth having in your fingers, and the handful of situations that
+        come up often enough to be worth a recipe.</p>
+    </div>
+
+    <section>
+      <div class="eyebrow">Daily</div>
+      <h2>The loop</h2>
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">what for</span></div>
+        <div class="annot-row"><span class="o">git switch -c my-feature</span><span class="m">Create and move to a new branch. Modern replacement for <code>checkout -b</code>.</span></div>
+        <div class="annot-row"><span class="o">git switch main</span><span class="m">Move between existing branches.</span></div>
+        <div class="annot-row"><span class="o">git add -p</span><span class="m">Stage hunk by hunk, answering y/n. The easiest way to keep commits focused.</span></div>
+        <div class="annot-row"><span class="o">git commit</span><span class="m">Opens your editor, so you can write a body. <code>-m</code> encourages one-liners.</span></div>
+        <div class="annot-row"><span class="o">git push -u origin my-feature</span><span class="m">First push of a branch. <code>-u</code> links it so later pushes need no arguments.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Recipes</div>
+      <h2>Situations that keep happening</h2>
+
+      <h3>I committed to main by mistake</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git branch my-feature</div>
+        <div class="cmd-body"><p>Pin the commits under a real branch name first, while main still
+          points at them.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">rescuing commits made on main by mistake</span><span class="gon">on <b>main</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="rescuing commits made on main by mistake">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <line class="edge" x1="246" y1="45" x2="314" y2="45"/>
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">x</text>
+          <circle class="node" cx="326" cy="45" r="8"/>
+          <text class="hash" x="326" y="69" text-anchor="middle">y</text>
+          <text class="tip" x="142" y="28" text-anchor="middle">origin/main</text>
+          <text class="tip" x="326" y="28" text-anchor="middle">main, oops</text>
+          <line class="edge" x1="246" y1="128" x2="314" y2="128"/>
+          <circle class="node node-new" cx="234" cy="128" r="8"/>
+          <text class="hash" x="234" y="152" text-anchor="middle">x</text>
+          <circle class="node node-new" cx="326" cy="128" r="8"/>
+          <text class="hash" x="326" y="152" text-anchor="middle">y</text>
+          <path class="edge-new" d="M150 53 C 187.0 53, 187.0 128, 224 128"/>
+          <text class="tip" x="326" y="111" text-anchor="middle">my-feature</text>
+        </svg>
+        <p class="gfoot">Branch <em>first</em>, then reset main. The commits survive under the new name, so the <code>--hard</code> that follows costs nothing.</p>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git reset --hard origin/main</div>
+        <div class="cmd-body"><p>Put main back where the remote has it. Safe here <em>only</em>
+          because the previous line saved your work.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git switch my-feature</div>
+        <div class="cmd-body"><p>Carry on where you left off, now on the right branch.</p></div>
+      </div>
+
+      <h3>I need to switch branches but am not ready to commit</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git stash push -m "half-done ride search"</div>
+        <div class="cmd-body"><p>Shelves your changes and gives you a clean tree. Name it, or in two
+          days you will have four anonymous stashes.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git stash &mdash; work shelved off to the side</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 100" role="img" aria-label="git stash &mdash; work shelved off to the side">
+          <line class="edge" x1="62" y1="52" x2="130" y2="52"/>
+          <line class="edge" x1="154" y1="52" x2="222" y2="52"/>
+          <circle class="node node-base" cx="50" cy="52" r="8"/>
+          <text class="hash" x="50" y="76" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="52" r="8"/>
+          <text class="hash" x="142" y="76" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="52" r="8"/>
+          <text class="hash" x="234" y="76" text-anchor="middle">c</text>
+          <text class="tip" x="234" y="35" text-anchor="middle">HEAD, clean tree</text>
+          <rect x="352" y="34" width="180" height="42" rx="3" fill="var(--surface-2)" stroke="var(--rule)"/>
+          <text class="hash" x="442" y="52" text-anchor="middle">stash@{0}</text>
+          <text class="faded" x="442" y="68" text-anchor="middle">your uncommitted work</text>
+        </svg>
+        <p class="gfoot">The stash is not a commit on your branch. It sits to one side until you <code>pop</code> or <code>apply</code> it.</p>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git stash list &amp;&amp; git stash pop</div>
+        <div class="cmd-body"><p><code>pop</code> applies the newest and deletes it;
+          <code>apply</code> keeps it in the list.</p></div>
+      </div>
+
+      <h3>I want one commit from another branch</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git cherry-pick &lt;hash&gt;</div>
+        <div class="cmd-body"><p>Replays that one commit onto your current branch as a new commit.
+          Useful for lifting a bug fix out of a long-running branch.</p></div>
+      </div>
+      <div class="graphwrap">
+        <div class="gcap"><span class="gt">git cherry-pick &mdash; replay one commit here</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="git cherry-pick &mdash; replay one commit here">
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <line class="edge" x1="246" y1="45" x2="314" y2="45"/>
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">a</text>
+          <circle class="node node-base" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">b</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">fix</text>
+          <circle class="node" cx="326" cy="45" r="8"/>
+          <text class="hash" x="326" y="69" text-anchor="middle">c</text>
+          <text class="tip" x="326" y="28" text-anchor="middle">other-branch</text>
+          <line class="edge" x1="246" y1="128" x2="314" y2="128"/>
+          <circle class="node node-new" cx="234" cy="128" r="8"/>
+          <text class="hash" x="234" y="152" text-anchor="middle">d</text>
+          <circle class="node node-new" cx="326" cy="128" r="8"/>
+          <text class="hash" x="326" y="152" text-anchor="middle">fix'</text>
+          <path class="edge-new" d="M150 53 C 187.0 53, 187.0 128, 224 128"/>
+          <text class="tip" x="326" y="111" text-anchor="middle">my-feature</text>
+        </svg>
+        <p class="gfoot">One commit copied across as a new commit with a new hash. The original stays where it was.</p>
+      </div>
+
+      <h3>I want to throw away my uncommitted changes to one file</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git restore app/api/deps.py</div>
+        <div class="cmd-body"><p>Working-tree version back to HEAD. There is no undo for this, because
+          the content was never committed. Check <code>git diff</code> first.</p></div>
+      </div>
+
+      <h3>Someone force-pushed and my branch looks wrong</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-branch">git fetch origin &amp;&amp; git reset --hard origin/my-branch</div>
+        <div class="cmd-body"><p>Adopt the remote version wholesale. Run <code>git log</code> first
+          to check you have nothing local worth keeping, and <code>git branch backup</code> if
+          unsure.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Habits</div>
+      <h2>Five that prevent most trouble</h2>
+      <div class="rule-line"><span class="tag yes">1</span><span><code>git status</code> and <code>git diff --staged</code> before every commit. Two seconds, catches the wrong file every time.</span></div>
+      <div class="rule-line"><span class="tag yes">2</span><span><code>git fetch</code> before deciding anything about the remote. Opinions formed on stale refs are wrong.</span></div>
+      <div class="rule-line"><span class="tag yes">3</span><span><code>git branch backup-x</code> before any rebase, reset or force-push. Free, and it removes the fear.</span></div>
+      <div class="rule-line"><span class="tag yes">4</span><span>Commit early and often locally. Uncommitted work is the only work git cannot recover.</span></div>
+      <div class="rule-line"><span class="tag yes">5</span><span>Write the message for whoever reads it in six weeks. The diff says what changed; the message should say why.</span></div>
+    </section>
+
+    <section>
+      <div class="eyebrow">If it goes wrong</div>
+      <h2>The recovery order</h2>
+      <div class="annot">
+        <div class="annot-row head"><span class="o">step</span><span class="m">why</span></div>
+        <div class="annot-row"><span class="o">1. stop, do not run more commands</span><span class="m">Most lost work is lost by the third panicked command, not the first mistake.</span></div>
+        <div class="annot-row"><span class="o">2. git status</span><span class="m">Establish where you actually are, including whether a rebase or merge is mid-flight.</span></div>
+        <div class="annot-row"><span class="o">3. git reflog</span><span class="m">Find the commit you want to be at. It is almost always still listed.</span></div>
+        <div class="annot-row"><span class="o">4. git branch rescue &lt;hash&gt;</span><span class="m">Pin it before moving anything, so a wrong next step costs nothing.</span></div>
+        <div class="annot-row"><span class="o">5. git reset --hard &lt;hash&gt;</span><span class="m">Only now, and only once you have the rescue branch.</span></div>
+      </div>
+      <p class="measure">The single exception the reflog cannot save you from is work that was never
+        committed. That is the real argument for habit 4.</p>
+    </section>
+    <div class="pagers"><a class="pager prev" href="#part-3"><span class="dir">&larr; previous</span><span class="t">Inspecting, and reading what you get back</span></a><a class="pager next" href="#part-5"><span class="dir">next &rarr;</span><span class="t">Forks, remotes and pull requests</span></a></div>
+  </article>
+
+  <article class="doc-page" id="part-5">
+    <div class="part">
+      <div class="pnum">Part five</div>
+      <h2>Forks, remotes and pull requests</h2>
+      <p class="lede">Everything so far happened on one machine. This is what changes once a second
+        copy of the repository exists on a server, and a third exists in someone else's account.</p>
+    </div>
+
+    <section>
+      <div class="eyebrow">The concept</div>
+      <h2>A remote is a saved URL</h2>
+      <p class="measure">That is the entire idea. A remote is a nickname for a repository somewhere
+        else, so you can type <code>origin</code> instead of the full address every time.</p>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">a remote is a saved URL with a nickname</span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="a remote is a saved URL with a nickname">
+          <defs>
+            <marker id="ahr1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="ahead" d="M0 0 L8 4 L0 8 z"/>
+            </marker>
+            <marker id="ahnr1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="ahead-new" d="M0 0 L8 4 L0 8 z"/>
+            </marker>
+          </defs>
+          <rect class="tbox" x="40" y="60" width="200" height="62" rx="4"/>
+          <text class="tname" x="140.0" y="84" text-anchor="middle">github.com/them/repo</text>
+          <text class="tsub" x="140.0" y="101" text-anchor="middle">a URL</text>
+          <rect class="tbox tbox-local" x="380" y="60" width="200" height="62" rx="4"/>
+          <text class="tname" x="480.0" y="84" text-anchor="middle">your machine</text>
+          <text class="tsub" x="480.0" y="101" text-anchor="middle">the clone</text>
+          <path class="tarrow" d="M250 78 L 370 78" marker-end="url(#ahr1)"/>
+          <text class="tlabel" x="310.0" y="69.0" text-anchor="middle">git fetch origin</text>
+          <path class="tarrow" d="M370 104 L 250 104" marker-end="url(#ahr1)"/>
+          <text class="tlabel" x="310.0" y="122.0" text-anchor="middle">git push origin</text>
+          <text class="tsub" x="310" y="150" text-anchor="middle">origin = a nickname for that URL</text>
+        </svg>
+        <p class="gfoot">Nothing about the name <code>origin</code> is special. It is the default nickname <code>git clone</code> writes for wherever you cloned from. You can add more, rename them, or delete them.</p>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git remote -v</div>
+        <div class="cmd-body"><p>Lists every remote you have, with its URL and whether it is used
+          for fetching, pushing, or both.</p></div>
+      </div>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">output</span><span class="m">meaning</span></div>
+        <div class="annot-row"><span class="o">origin  git@github.com:you/repo.git (fetch)</span><span class="m">Where <code>git fetch</code> with no arguments reads from.</span></div>
+        <div class="annot-row"><span class="o">origin  git@github.com:you/repo.git (push)</span><span class="m">Where <code>git push</code> writes to. Usually the same URL, but it need not be.</span></div>
+      </div>
+
+      <div class="note">
+        <strong><code>origin</code> is not a keyword.</strong> It is just the nickname
+        <code>git clone</code> happens to write for wherever you cloned from. You can rename it,
+        delete it, or have five remotes with any names you like. Git treats them all identically.
+      </div>
+
+      <h3>The two names you will meet</h3>
+      <div class="kv">
+        <div>
+          <span class="k2">origin</span>
+          <span class="v2">By convention, the copy <em>you</em> can push to. On this project that is
+            <code>michaelwsd/monash-go</code> itself. On a fork it is your fork.</span>
+        </div>
+        <div>
+          <span class="k2">upstream</span>
+          <span class="v2">By convention, the original project you forked from and cannot write to.
+            You fetch from it to stay current, and you never push to it.</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Which flow are you in</div>
+      <h2>Fork, or branch on the same repo</h2>
+      <p class="measure">Two different workflows, and picking the wrong one is where most of the
+        confusion starts.</p>
+
+      <div class="split">
+        <div class="card safe">
+          <h3>Branch on the same repo</h3>
+          <p>You have write access. One remote, <code>origin</code>. Branch, push, open a PR from
+            your branch to <code>main</code>. <b>This is what MonashGO uses</b> &mdash; PRs #3 and #4
+            came from <code>error_handler</code> and <code>sprint2</code> on the same repository.</p>
+        </div>
+        <div class="card">
+          <h3>Fork</h3>
+          <p>You do not have write access, so you take your own server-side copy first. Two remotes,
+            <code>origin</code> and <code>upstream</code>. Standard for contributing to open source
+            or to another team's project.</p>
+        </div>
+      </div>
+
+      <p class="measure">Everything below covers the fork flow, since it is the one with parts that
+        are not obvious. The same-repo flow is the same minus <code>upstream</code> and minus the
+        fork step.</p>
+    </section>
+
+    <section>
+      <div class="eyebrow">Setup, once</div>
+      <h2>Three copies, two remotes</h2>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">three copies, two remotes</span><span class="gon">on <b>your fork</b></span></div>
+        <svg class="graph" viewBox="0 0 620 235" role="img" aria-label="three copies, two remotes">
+          <defs>
+            <marker id="ahf1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="ahead" d="M0 0 L8 4 L0 8 z"/>
+            </marker>
+            <marker id="ahnf1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="ahead-new" d="M0 0 L8 4 L0 8 z"/>
+            </marker>
+          </defs>
+          <rect class="tbox" x="30" y="30" width="180" height="58" rx="4"/>
+          <text class="tname" x="120.0" y="54" text-anchor="middle">monash/monash-go</text>
+          <text class="tsub" x="120.0" y="71" text-anchor="middle">the original</text>
+          <rect class="tbox tbox-mine" x="30" y="152" width="180" height="58" rx="4"/>
+          <text class="tname" x="120.0" y="176" text-anchor="middle">you/monash-go</text>
+          <text class="tsub" x="120.0" y="193" text-anchor="middle">your fork</text>
+          <rect class="tbox tbox-local" x="400" y="90" width="190" height="58" rx="4"/>
+          <text class="tname" x="495.0" y="114" text-anchor="middle">your machine</text>
+          <text class="tsub" x="495.0" y="131" text-anchor="middle">local clone</text>
+          <path class="tarrow" d="M120 96 L 120 144" marker-end="url(#ahf1)"/>
+          <text class="tlabel" x="120.0" y="138.0" text-anchor="middle">fork, once, on GitHub</text>
+          <path class="tarrow tarrow-new" d="M216 176 Q 305.0 138.0 394 128" marker-end="url(#ahnf1)"/>
+          <text class="tlabel tlabel-new" x="305.0" y="130.0" text-anchor="middle">git clone</text>
+          <path class="tarrow" d="M394 108 Q 305.0 71.0 216 62" marker-end="url(#ahf1)"/>
+          <text class="tlabel" x="305.0" y="63.0" text-anchor="middle">upstream: fetch only</text>
+          <path class="tarrow tarrow-new" d="M400 140 Q 310.0 183.0 220 190" marker-end="url(#ahnf1)"/>
+          <text class="tlabel tlabel-new" x="310.0" y="199.0" text-anchor="middle">origin: push here</text>
+        </svg>
+        <p class="gfoot"><b>upstream</b> is the original you cannot write to; you only ever read from it. <b>origin</b> is your fork, which you own and push to. Both names are conventions, not git features.</p>
+      </div>
+
+      <p class="measure">Forking is a GitHub action, not a git command: press the button and GitHub
+        makes you a server-side copy. Then clone <em>your fork</em>, not the original.</p>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="~">git clone git@github.com:you/monash-go.git</div>
+        <div class="cmd-body"><p>Creates the local copy and sets <code>origin</code> to your fork
+          automatically.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git remote add upstream git@github.com:michaelwsd/monash-go.git</div>
+        <div class="cmd-body"><p>Adds a second remote pointing at the original. Now you can read
+          their changes without giving up your own push target.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git remote -v</div>
+        <div class="cmd-body"><p>Confirm you have exactly two: <code>origin</code> to your fork,
+          <code>upstream</code> to theirs.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">The loop</div>
+      <h2>Making a change and opening a PR</h2>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git fetch upstream &amp;&amp; git switch -c my-feature upstream/main</div>
+        <div class="cmd-body"><p>Branch from <em>their</em> latest main, not from whatever your fork
+          happens to hold. This one habit prevents most fork-sync pain.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git add -p &amp;&amp; git commit</div>
+        <div class="cmd-body"><p>Work as normal. Small, focused commits with real messages: a
+          reviewer reads them one at a time.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git push -u origin my-feature</div>
+        <div class="cmd-body"><p>Pushes to <b>your fork</b>. <code>-u</code> links the branch so
+          later pushes need no arguments. This never touches the original project.</p></div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">opening a pull request</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 232" role="img" aria-label="opening a pull request">
+          <defs>
+            <marker id="ahp1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="ahead" d="M0 0 L8 4 L0 8 z"/>
+            </marker>
+            <marker id="ahnp1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="ahead-new" d="M0 0 L8 4 L0 8 z"/>
+            </marker>
+          </defs>
+          <rect class="tbox" x="30" y="40" width="190" height="58" rx="4"/>
+          <text class="tname" x="125.0" y="64" text-anchor="middle">monash/monash-go</text>
+          <text class="tsub" x="125.0" y="81" text-anchor="middle">main</text>
+          <rect class="tbox tbox-mine" x="30" y="150" width="190" height="58" rx="4"/>
+          <text class="tname" x="125.0" y="174" text-anchor="middle">you/monash-go</text>
+          <text class="tsub" x="125.0" y="191" text-anchor="middle">my-feature</text>
+          <rect class="tbox tbox-local" x="400" y="150" width="190" height="58" rx="4"/>
+          <text class="tname" x="495.0" y="174" text-anchor="middle">your machine</text>
+          <text class="tsub" x="495.0" y="191" text-anchor="middle">my-feature</text>
+          <path class="tarrow tarrow-new" d="M394 179 L 226 179" marker-end="url(#ahnp1)"/>
+          <text class="tlabel tlabel-new" x="310.0" y="170.0" text-anchor="middle">git push -u origin my-feature</text>
+          <path class="tarrow tarrow-new" d="M120 144 L 120 104" marker-end="url(#ahnp1)"/>
+          <text class="tlabel tlabel-new" x="120.0" y="142.0" text-anchor="middle">pull request</text>
+          <text class="tsub" x="310" y="128" text-anchor="middle">a PR is a request, not a git command</text>
+        </svg>
+        <p class="gfoot">The PR itself happens on GitHub, not in git. It asks the maintainers to pull your branch into their <code>main</code>. Push more commits to the same branch and the PR updates automatically.</p>
+      </div>
+
+      <p class="measure">GitHub then shows a "Compare &amp; pull request" button. The PR names two
+        things: the branch you are offering, and the branch you want it merged into. Everything
+        after this is conversation.</p>
+
+      <div class="annot">
+        <div class="annot-row head"><span class="o">during review</span><span class="m">what to do</span></div>
+        <div class="annot-row"><span class="o">reviewer asks for a change</span><span class="m">Commit and <code>git push</code>. The PR updates itself; you never open a second one.</span></div>
+        <div class="annot-row"><span class="o">your branch has messy commits</span><span class="m"><code>git rebase -i</code>, then <code>git push --force-with-lease</code>. Safe: the branch is yours.</span></div>
+        <div class="annot-row"><span class="o">main moved and the PR conflicts</span><span class="m">Rebase onto the new upstream/main. Covered below.</span></div>
+        <div class="annot-row"><span class="o">PR is merged</span><span class="m">Delete the branch on both sides. Its commits now live in main.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Staying current</div>
+      <h2>Your fork does not update itself</h2>
+      <p class="measure">A fork is a snapshot taken the moment you pressed the button. It learns
+        nothing about the original afterwards unless you tell it to.</p>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">your fork has gone stale</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 170" role="img" aria-label="your fork has gone stale">
+          <circle class="node node-base" cx="50" cy="45" r="8"/>
+          <text class="hash" x="50" y="69" text-anchor="middle">base</text>
+          <line class="edge" x1="154" y1="45" x2="222" y2="45"/>
+          <circle class="node" cx="142" cy="45" r="8"/>
+          <text class="hash" x="142" y="69" text-anchor="middle">u1</text>
+          <circle class="node" cx="234" cy="45" r="8"/>
+          <text class="hash" x="234" y="69" text-anchor="middle">u2</text>
+          <text class="tip" x="234" y="28" text-anchor="middle">upstream/main</text>
+          <line class="edge" x1="62" y1="45" x2="130" y2="45"/>
+          <line class="edge" x1="154" y1="128" x2="222" y2="128"/>
+          <circle class="node node-new" cx="142" cy="128" r="8"/>
+          <text class="hash" x="142" y="152" text-anchor="middle">f1</text>
+          <circle class="node node-new" cx="234" cy="128" r="8"/>
+          <text class="hash" x="234" y="152" text-anchor="middle">f2</text>
+          <path class="edge-new" d="M58 53 C 95.0 53, 95.0 128, 132 128"/>
+          <text class="tip" x="234" y="111" text-anchor="middle">my-feature</text>
+        </svg>
+        <p class="gfoot">Your fork does not update itself. While you worked, <code>upstream/main</code> gained commits your branch has never seen.</p>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git fetch upstream</div>
+        <div class="cmd-body"><p>Reads their latest into <code>upstream/main</code>. Changes nothing
+          of yours.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git rebase upstream/main</div>
+        <div class="cmd-body"><p>Replays your commits on top of theirs, so your PR applies cleanly
+          and reviewers see only your changes.</p></div>
+      </div>
+
+<div class="graphwrap">
+        <div class="gcap"><span class="gt">after rebasing onto upstream/main</span><span class="gon">on <b>my-feature</b></span></div>
+        <svg class="graph" viewBox="0 0 620 105" role="img" aria-label="after rebasing onto upstream/main">
+          <line class="edge" x1="62" y1="55" x2="130" y2="55"/>
+          <line class="edge" x1="154" y1="55" x2="222" y2="55"/>
+          <line class="edge" x1="246" y1="55" x2="314" y2="55"/>
+          <line class="edge" x1="338" y1="55" x2="406" y2="55"/>
+          <circle class="node node-base" cx="50" cy="55" r="8"/>
+          <text class="hash" x="50" y="79" text-anchor="middle">base</text>
+          <circle class="node node-base" cx="142" cy="55" r="8"/>
+          <text class="hash" x="142" y="79" text-anchor="middle">u1</text>
+          <circle class="node node-base" cx="234" cy="55" r="8"/>
+          <text class="hash" x="234" y="79" text-anchor="middle">u2</text>
+          <circle class="node node-new" cx="326" cy="55" r="8"/>
+          <text class="hash" x="326" y="79" text-anchor="middle">f1'</text>
+          <circle class="node node-new" cx="418" cy="55" r="8"/>
+          <text class="hash" x="418" y="79" text-anchor="middle">f2'</text>
+          <text class="tip" x="234" y="38" text-anchor="middle">upstream/main</text>
+          <text class="tip" x="418" y="38" text-anchor="middle">my-feature</text>
+        </svg>
+        <p class="gfoot">Your two commits are replayed on top of the latest upstream. New hashes, so the push back to your fork needs <code>--force-with-lease</code>. That is safe here: the branch is yours alone.</p>
+      </div>
+
+      <div class="cmd">
+        <div class="cmd-line" data-branch="my-feature">git push --force-with-lease</div>
+        <div class="cmd-body"><p>Your commits have new hashes, so the branch on your fork must be
+          replaced. The PR picks it up automatically.</p></div>
+      </div>
+
+      <div class="note">
+        <strong>This is the one place force-pushing is routine.</strong> The rule from part two
+        still holds: never force a shared branch. A PR branch in your own fork is not shared &mdash;
+        you are its only author, and rebasing it is normal practice while a PR is open.
+      </div>
+
+      <h3>Updating your fork's main</h3>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git fetch upstream &amp;&amp; git merge --ff-only upstream/main</div>
+        <div class="cmd-body"><p><code>--ff-only</code> refuses if your main has drifted, which is
+          exactly what you want. Your fork's <code>main</code> should be a mirror, never somewhere
+          you commit.</p></div>
+      </div>
+      <div class="cmd">
+        <div class="cmd-line" data-branch="main">git push origin main</div>
+        <div class="cmd-body"><p>Optional. Only needed to make the fork look current on GitHub;
+          your work does not depend on it.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">Reference</div>
+      <h2>Remote commands worth knowing</h2>
+      <div class="annot">
+        <div class="annot-row head"><span class="o">command</span><span class="m">what for</span></div>
+        <div class="annot-row"><span class="o">git remote -v</span><span class="m">List remotes and their URLs.</span></div>
+        <div class="annot-row"><span class="o">git remote add upstream &lt;url&gt;</span><span class="m">Add a second remote.</span></div>
+        <div class="annot-row"><span class="o">git remote set-url origin &lt;url&gt;</span><span class="m">Repoint one, e.g. switching HTTPS to SSH.</span></div>
+        <div class="annot-row"><span class="o">git remote rename origin fork</span><span class="m">Rename. Nothing breaks; the name is only a label.</span></div>
+        <div class="annot-row"><span class="o">git fetch --all</span><span class="m">Update every remote at once.</span></div>
+        <div class="annot-row"><span class="o">git branch -r</span><span class="m">List remote-tracking branches you know about.</span></div>
+        <div class="annot-row"><span class="o">git push origin --delete my-feature</span><span class="m">Delete a branch on the remote after the PR merges.</span></div>
+      </div>
+
+      <div class="note">
+        <strong>Remote-tracking branches are read-only caches.</strong> <code>origin/main</code> is
+        your record of where <code>main</code> was on the remote at your last fetch. It only moves
+        when you fetch or push, never on its own, which is why an opinion formed without fetching
+        first is usually out of date.
+      </div>
+    </section>
+    <div class="pagers"><a class="pager prev" href="#part-4"><span class="dir">&larr; previous</span><span class="t">Everyday commands and recipes</span></a><span></span></div>
+  </article>
+
+  <footer>
+    <div>MonashGO &middot; git field guide</div>
+    <div>Commands are plain git, no aliases assumed. Anything that rewrites history is marked as
+      such; anything marked <span class="mono">--hard</span> or <span class="mono">--force</span>
+      deserves a <span class="mono">git branch backup-x</span> first.</div>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var ids = ['part-1', 'part-2', 'part-3', 'part-4', 'part-5'].map(String);
+  var pages = ids.map(function (id) { return document.getElementById(id); });
+  var links = Array.prototype.slice.call(document.querySelectorAll('.pagenav a'));
+
+  function show(id, scroll) {
+    if (ids.indexOf(id) === -1) id = ids[0];
+    pages.forEach(function (p) { p.classList.toggle('is-active', p.id === id); });
+    links.forEach(function (a) {
+      var on = a.getAttribute('data-page') === id;
+      a.classList.toggle('is-active', on);
+      if (on) { a.setAttribute('aria-current', 'page'); } else { a.removeAttribute('aria-current'); }
+    });
+    if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  function fromHash(scroll) { show((location.hash || '').replace('#', ''), scroll); }
+
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var id = a.getAttribute('href').slice(1);
+    if (ids.indexOf(id) === -1) return;
+    e.preventDefault();
+    if (location.hash !== '#' + id) { history.pushState(null, '', '#' + id); }
+    show(id, true);
+  });
+
+  window.addEventListener('hashchange', function () { fromHash(true); });
+  window.addEventListener('popstate', function () { fromHash(true); });
+  document.documentElement.classList.add('js');
+  fromHash(false);
+})();
+</script>
+</body>
+</html>

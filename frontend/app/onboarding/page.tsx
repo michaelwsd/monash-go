@@ -44,7 +44,7 @@ export default function OnboardingPage() {
       {error && (
         <p
           role="alert"
-          className="fixed bottom-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm"
+          className="fixed bottom-6 left-1/2 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-800 shadow-sm"
         >
           {error}
         </p>

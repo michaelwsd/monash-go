@@ -45,6 +45,18 @@ def get_current_claims(
     return verify_clerk_token(credentials.credentials)
 
 
+def get_vehicle_demo_user_clerk_id(
+    settings: SettingsDep,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+) -> str:
+    """Allow local vehicle testing before Clerk is wired into the demo flow."""
+    if credentials is None and settings.environment == "development":
+        return "dev-vehicle-user"
+    if credentials is None:
+        raise InvalidCredentialsError("missing or malformed authorization header")
+    return verify_clerk_token(credentials.credentials).clerk_id
+
+
 def get_current_user_clerk_id(
     claims: Annotated[ClerkClaims, Depends(get_current_claims)],
 ) -> str:
@@ -56,3 +68,5 @@ def get_current_user_clerk_id(
 CurrentUser = Annotated[str, Depends(get_current_user_clerk_id)]
 
 CurrentClaims = Annotated[ClerkClaims, Depends(get_current_claims)]
+
+VehicleUser = Annotated[str, Depends(get_vehicle_demo_user_clerk_id)]

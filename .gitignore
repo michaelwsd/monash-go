@@ -4,4 +4,10 @@ AGENTS.md
 docs/build_plan.md
 docs/sprints/
 .DS_Store
+.pnpm-store/
 docs/*.html
+.env
+.env.*
+!.env.sample
+!.env.example
+**/supabase/.temp/

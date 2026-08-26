@@ -1,0 +1,4 @@
+allowBuilds:
+  # Next.js has working fallbacks for these optional native build scripts.
+  sharp: false
+  unrs-resolver: false

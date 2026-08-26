@@ -41,3 +41,9 @@ class InvalidCredentialsError(DomainError):
     """token is missing, malformed, expired, or not signed by Clerk"""
 
     status_code = 401
+
+
+class ExternalServiceError(DomainError):
+    """A required third-party service could not complete the request."""
+
+    status_code = 503

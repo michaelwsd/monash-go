@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from app.schemas.enums import UserRole
 from app.schemas.user import User
 from supabase import Client
 
@@ -51,5 +52,11 @@ def update_clerk_fields(db: Client, *, clerk_id: str, email: str, full_name: str
 
 def update_profile(db: Client, *, clerk_id: str, fields: dict[str, Any]) -> User | None:
     """update the columns in fields, none if no rows matched"""
-    res = db.table(TABLE).update(fields).execute()
+    res = db.table(TABLE).update(fields).eq("clerk_id", clerk_id).execute()
+    return User.model_validate(res.data[0]) if res.data else None
+
+
+def set_role(db: Client, *, clerk_id: str, role: UserRole) -> User | None:
+    """change a user's role. None if no row matched"""
+    res = db.table(TABLE).update({"role": role}).eq("clerk_id", clerk_id).execute()
     return User.model_validate(res.data[0]) if res.data else None

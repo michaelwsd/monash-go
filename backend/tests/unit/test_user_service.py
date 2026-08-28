@@ -62,6 +62,20 @@ class FakeUserRepo:
         return updated
 
 
+class RecordingUserRepo(FakeUserRepo):
+    """Same behaviour, but records which clerk_id each update was scoped to."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.update_calls: list[str] = []
+
+    def update_profile(
+        self, db: object, *, clerk_id: str, fields: dict[str, object]
+    ) -> User | None:
+        self.update_calls.append(clerk_id)
+        return super().update_profile(db, clerk_id=clerk_id, fields=fields)
+
+
 class FakeRewardsRepo:
     def __init__(self) -> None:
         self.user_ids: set[UUID] = set()
@@ -120,6 +134,24 @@ def test_partial_update_leaves_other_fields_alone(
     assert result.is_concession is True
     assert result.phone == "0412345678"  # not blanked by the second call
     assert result.email == "a@student.monash.edu"
+
+
+def test_profile_update_is_scoped_to_one_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The repository once shipped without .eq('clerk_id'), which made
+    PATCH /users/me rewrite every row in the table. The fake filters, so the
+    fake can never catch that on its own - what this pins is the contract the
+    service relies on: the update is addressed to exactly one clerk_id."""
+    users = RecordingUserRepo()
+    monkeypatch.setattr(user_service, "user_repository", users)
+    monkeypatch.setattr(user_service, "rewards_repository", FakeRewardsRepo())
+    user_service.sync(NO_DB, clerk_id="user_1", email="a@student.monash.edu", full_name="A B")
+    user_service.sync(NO_DB, clerk_id="user_2", email="b@student.monash.edu", full_name="C D")
+
+    user_service.update_profile(NO_DB, clerk_id="user_1", changes=UserUpdate(home_campus="clayton"))
+
+    assert users.update_calls == ["user_1"]
+    assert users.rows["user_1"].home_campus == "clayton"
+    assert users.rows["user_2"].home_campus is None  # the other row is untouched
 
 
 def test_updating_an_unknown_user_is_not_found(

@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.exceptions.errors import InvalidInputError, NotFoundError
+from app.schemas.enums import UserRole
 from app.schemas.user import User
 from app.schemas.vehicle import Vehicle, VehicleCreate, VehicleReference
 from app.services import vehicle_service
@@ -55,8 +56,19 @@ def payload(**overrides: Any) -> VehicleCreate:
 
 
 class FakeUserRepo:
+    """Holds one mutable user, so a role promotion is visible to the test."""
+
+    def __init__(self, role: UserRole = "passenger") -> None:
+        self.user = OWNER.model_copy(update={"role": role})
+
     def get_by_clerk_id(self, db: object, clerk_id: str) -> User | None:
-        return OWNER if clerk_id == OWNER.clerk_id else None
+        return self.user if clerk_id == self.user.clerk_id else None
+
+    def set_role(self, db: object, *, clerk_id: str, role: UserRole) -> User | None:
+        if clerk_id != self.user.clerk_id:
+            return None
+        self.user = self.user.model_copy(update={"role": role})
+        return self.user
 
 
 class FakeVehicleRepo:
@@ -103,9 +115,13 @@ class FakeReferenceRepo:
         return self.tiers[2]
 
 
-def install(monkeypatch: pytest.MonkeyPatch, refs: FakeReferenceRepo) -> FakeVehicleRepo:
+def install(
+    monkeypatch: pytest.MonkeyPatch,
+    refs: FakeReferenceRepo,
+    users: FakeUserRepo | None = None,
+) -> FakeVehicleRepo:
     vehicles = FakeVehicleRepo()
-    monkeypatch.setattr(vehicle_service, "user_repository", FakeUserRepo())
+    monkeypatch.setattr(vehicle_service, "user_repository", users or FakeUserRepo())
     monkeypatch.setattr(vehicle_service, "vehicle_repository", vehicles)
     monkeypatch.setattr(vehicle_service, "vehicle_reference_repository", refs)
     return vehicles
@@ -182,6 +198,48 @@ def test_electric_uses_the_kwh_limit(monkeypatch: pytest.MonkeyPatch) -> None:
         vehicle_service.register(
             DB, clerk_id="user_1", payload=payload(fuel_type="electric", fuel_consumption=45.1)
         )
+
+
+def test_registering_a_car_makes_you_a_driver(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without this nobody can post a ride in Sprint 3."""
+    users = FakeUserRepo(role="passenger")
+    install(monkeypatch, FakeReferenceRepo(), users)
+
+    vehicle_service.register(DB, clerk_id="user_1", payload=payload())
+
+    assert users.user.role == "driver"
+
+
+def test_registering_a_second_car_changes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    users = FakeUserRepo(role="driver")
+    install(monkeypatch, FakeReferenceRepo(), users)
+
+    vehicle_service.register(DB, clerk_id="user_1", payload=payload())
+
+    assert users.user.role == "driver"
+
+
+def test_promotion_never_demotes_someone_who_is_both(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sprint 4 sets 'both' when a driver books a seat. Registering another
+    car afterwards must not walk that back."""
+    users = FakeUserRepo(role="both")
+    install(monkeypatch, FakeReferenceRepo(), users)
+
+    vehicle_service.register(DB, clerk_id="user_1", payload=payload())
+
+    assert users.user.role == "both"
+
+
+def test_a_rejected_registration_leaves_the_role_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A driver with no car would let POST /rides reference a vehicle that
+    was never written."""
+    users = FakeUserRepo(role="passenger")
+    install(monkeypatch, FakeReferenceRepo(), users)
+
+    with pytest.raises(InvalidInputError):
+        vehicle_service.register(DB, clerk_id="user_1", payload=payload(fuel_consumption=30.1))
+
+    assert users.user.role == "passenger"
 
 
 def test_suggestions_stop_at_the_first_tier_with_results(

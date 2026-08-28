@@ -1,6 +1,6 @@
 from app.schemas.enums import FuelType, PetStage, TransitMode
 
-# REQ-001: sign-up is restricted to Monash accounts. 
+# REQ-001: sign-up is restricted to Monash accounts.
 MONASH_EMAIL_DOMAINS = ("@student.monash.edu", "@monash.edu")
 
 # Plausibility ceilings, matching the limits the NRCan import pipeline applied,
@@ -18,12 +18,7 @@ EMISSION_FACTORS: dict[FuelType, float] = {
 }
 
 # kg CO2-e per passenger-km
-TRANSIT_FACTORS: dict[TransitMode, float] = {
-    "train": 0.038,
-    "bus": 0.077,
-    "tram": 0.0,
-    "walk": 0.0
-}
+TRANSIT_FACTORS: dict[TransitMode, float] = {"train": 0.038, "bus": 0.077, "tram": 0.0, "walk": 0.0}
 
 # kg CO2-e per km for the counterfactual "they would have driven themselves".
 # (11.1 / 100) x 2.31, where 11.1 L/100km is the Australian passenger-vehicle
@@ -31,13 +26,13 @@ TRANSIT_FACTORS: dict[TransitMode, float] = {
 # (real-world fuel purchased over distance, not a laboratory rating), and 2.31
 # is the petrol factor, petrol dominating the light passenger fleet.
 #
-# ASSUMPTION: every passenger would otherwise have driven alone. 
+# ASSUMPTION: every passenger would otherwise have driven alone.
 FLEET_AVG_RATE = (11.1 / 100) * 2.31
 
 # $ per kWh. Victorian Default Offer 2026-27 residential single-rate usage
 # charge, GST inclusive, effective 1 July 2026, mean of the five distribution
 # zones (Essential Services Commission, 2026). Assumes home charging on a flat
-# tariff. 
+# tariff.
 ELECTRICITY_PRICE = 0.2820
 
 # $ per trip. Myki 2-hour fare, Zone 1+2, effective 1 January 2026. All

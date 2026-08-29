@@ -1,6 +1,7 @@
 # Sprint 2 — User sync, vehicles, and the emissions engine
 
 **Dates:** 28/08/26 – 11/09/26 (planned)
+**Status:** complete, merged via PR #8 (`ea01829`), with follow-up fixes in `6f3b8c0`
 **Build order reference:** `build_plan.md` Steps 2, 3 and 4, combined into one sprint
 **Builds toward:** REQ-001 (completed this sprint), REQ-005 (completed this sprint), and the vehicle
 data every later feature reads
@@ -42,8 +43,10 @@ them:
 Also required:
 - `co2_avoided` with zero passengers evaluates to exactly 0 (this is what makes an unbooked ride
   worth nothing — a property test, not just an example).
-- `co2_avoided` is monotonically increasing in passenger count (Corolla, 18 km: 0 / 314 / 726 /
-  1,163 / 1,610 points for 0–4 passengers, per `changes.md` §1.5 point 4).
+- `co2_avoided` is monotonically increasing in passenger count (Corolla, 18 km: 0 / 313 / 726 /
+  1,163 / 1,609 points for 0–4 passengers). Note `changes.md` §1.5 point 4 prints 314 and 1,610;
+  both come from rounding `co2_solo` to two decimals before subtracting and are wrong. Assert the
+  formula, not the doc — and fix the doc.
 - The `max(0, ...)` guard: construct a vehicle above 20 L/100km and confirm the result clamps to 0
   rather than going negative.
 - `co2_solo` (dashboard version) vs `co2_avoided` (rewards version) must be two distinct functions
@@ -51,7 +54,9 @@ Also required:
   `changes.md` §1 exists to prevent.
 - Cost: `cost_solo`, `cost_rideshare` for petrol/diesel/hybrid using `fuel_price`; electric vehicles
   branch to `ELECTRICITY_PRICE = $0.2820/kWh`, not the fuel price — write a test that would fail
-  (by roughly 10x, per `changes.md` §4) if the branch is missing.
+  if the branch is missing. `changes.md` §4 says the error is "roughly ten times too low"; that
+  direction is inverted. It is about 6.7x too **high** — $5.40 against $0.80 for an 18 km Model 3
+  at 15.8 kWh/100km. The branch is needed either way.
 - `points_earned = floor(co2_avoided_kg * 100)`.
 - Pet stage thresholds: 15 / 60 / 200 / 800 kg cumulative → hatched / juvenile / adult / legendary
   (`CLAUDE.md`, Pet Stage Thresholds table — these supersede the original proposal figures).
@@ -59,7 +64,8 @@ Also required:
 **Then implement**, only after the above fail for the right reason:
 - `core/constants.py` — every factor, fare and threshold, each with its citation as an inline
   comment (petrol 2.31, diesel 2.72, hybrid 2.31, electric 0 kg CO2-e; train 0.038, bus 0.077, tram
-  0 per passenger-km; `FLEET_AVG_RATE = 0.2564`; `ELECTRICITY_PRICE = 0.2820`; myki full $5.70 /
+  0 per passenger-km; `FLEET_AVG_RATE = (11.1 / 100) * 2.31`, left as a derivation because the
+  rounded 0.2564 does not reproduce the §1.8 clamp scan; `ELECTRICITY_PRICE = 0.2820`; myki full $5.70 /
   concession $2.85). Constants appear exactly once — never inline a factor in a service.
 - `core/emissions.py` — `co2_solo`, `co2_rideshare`, `co2_transit`, `co2_avoided` (the last per the
   formula in `changes.md` §1.2, *not* the older §1.1 formula — occupants = passengers + 1, driver
@@ -74,8 +80,10 @@ real Supabase client — this is a service-layer test):
 - Syncing a brand-new `clerk_id` creates exactly one `users` row and one `rewards` row.
 - Syncing the same `clerk_id` a second time changes nothing (idempotency is the whole point — the
   frontend calls this on every page load, per `build_plan.md` Step 2's rationale).
-- `is_concession` is seeded `true` when the email domain is `@student.monash.edu`, `false`
-  otherwise.
+- `is_concession` defaults to `false` and is **not** derived from the email domain. Student status
+  is not concession eligibility — a concession myki requires a separately approved card. The
+  profile form sets it via `PATCH /users/me`. This supersedes `CLAUDE.md` lines 114 and 150, which
+  still say otherwise.
 
 **Write second**, in `tests/integration/test_users_endpoint.py`, using `TestClient` with
 `app.dependency_overrides[CurrentUser]` set to a fixed test identity:
@@ -86,7 +94,10 @@ real Supabase client — this is a service-layer test):
 - `app/schemas/user.py` — `UserCreate`, `UserResponse`, `User`.
 - `app/repositories/user_repository.py` — upsert on `clerk_id`, never a blind insert.
 - `app/services/user_service.py` — sync logic, no HTTP knowledge, no `HTTPException`.
-- `app/api/v1/users.py` — `POST /users/sync`, registered in `app/api/v1/router.py`.
+- `app/api/routes/users.py` — `POST /users/sync` and `PATCH /users/me` (endpoint 17, added this
+  sprint for wireframe artboard `1m`: concession toggle, home campus, phone). Registered in
+  `app/api/router.py`. Note the path is `api/routes/`, not `api/v1/` — the `/api/v1` prefix is set
+  on the router, not carried in the directory name.
 
 ### 3. Vehicles
 
@@ -105,7 +116,12 @@ real Supabase client — this is a service-layer test):
 
 **Then implement:**
 - `app/schemas/vehicle.py`, `app/repositories/vehicle_repository.py`, `app/services/vehicle_service.py`.
-- `app/api/v1/vehicles.py` — `POST /vehicles`, `GET /vehicles/me`, `GET /vehicles/reference`.
+- `app/api/routes/vehicles.py` — `POST /vehicles`, `GET /vehicles/me`, `GET /vehicles/reference`,
+  and `GET /vehicles/reference/similar` (endpoint 18, added this sprint: progressive relaxation
+  through same-model-any-year, similar-model-same-fuel, same-make-and-fuel).
+- `vehicle_service.register` promotes `users.role` from `passenger` to `driver` after a successful
+  insert. Without it nothing ever sets the column and Sprint 3's `POST /rides` has nobody to
+  accept. Sprint 4 owns the `driver` → `both` transition.
 - Copy the chosen consumption value onto the `vehicles` row at write time; never join to
   `vehicle_reference` at read time, or a future reseed would retroactively change emissions already
   reported for past rides.
@@ -114,7 +130,7 @@ real Supabase client — this is a service-layer test):
 
 - [ ] `test_emissions.py`, `test_costs.py`, `test_points.py` all pass, including the hand-verified
       table above
-- [ ] `test_user_service.py` and `test_users_endpoint.py` pass — idempotency proven at both layers
+- [x] `test_user_service.py` and `test_users_endpoint.py` pass — idempotency proven at both layers
 - [ ] `test_vehicle_service.py` passes, including a vehicle absent from `vehicle_reference`
 - [ ] Every formula in `core/` has a test asserting a documented number, and `core/` imports nothing
       from `services/`, `repositories/`, or `api/`

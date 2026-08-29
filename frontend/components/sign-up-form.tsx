@@ -1,10 +1,7 @@
+"use client";
+
 import { useState } from "react";
-import type {
-  ComponentType,
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-} from "react";
+import type { ComponentType, ButtonHTMLAttributes, ReactNode } from "react";
 import {
   Car,
   Bus,
@@ -14,16 +11,16 @@ import {
   ChevronLeft,
   GraduationCap,
   Briefcase,
-  Leaf,
 } from "lucide-react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { TextField } from "@/components/form-fields";
+import VehiclePicker, {
+  EMPTY_CAR,
+  fuelTypeLabel,
+  isCarUsable,
+  type CarDetails,
+} from "@/components/vehicle-picker";
+import { consumptionUnit, type Campus } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // MonashGo onboarding form
@@ -40,32 +37,47 @@ import {
 //   />
 // ---------------------------------------------------------------------------
 
-const CAMPUSES = [
-  "Clayton",
-  "Caulfield",
-  "Peninsula",
-  "Parkville",
-  "Monash College",
-] as const;
-const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric", "Other"] as const;
+/* Values are the CAMPUS enum the backend stores; labels are what the user
+   reads. Same split as the fuel types, for the same reason. */
+const CAMPUSES: readonly { value: Campus; label: string }[] = [
+  { value: "clayton", label: "Clayton" },
+  { value: "caulfield", label: "Caulfield" },
+  { value: "peninsula", label: "Peninsula" },
+  { value: "parkville", label: "Parkville" },
+  { value: "city", label: "City" },
+];
 
-type Campus = (typeof CAMPUSES)[number];
-type FuelType = (typeof FUEL_TYPES)[number];
+function campusLabel(value: Campus | undefined): string {
+  return CAMPUSES.find((campus) => campus.value === value)?.label ?? "";
+}
+
 type Role = "Student" | "Staff" | "";
 type TravelMode = "Drive" | "Carpool" | "Public Transport" | "";
 
+/** Mirrors the backend's rule in app/schemas/user.py. */
+const PHONE_PATTERN = /^(\+?61|0)[2-478]\d{8}$/;
+
+function isValidPhone(phone: string): boolean {
+  return PHONE_PATTERN.test(phone.replace(/\s/g, ""));
+}
+
 export interface OnboardingProfile {
   name: string;
+  phone: string;
   role: Role;
+  isConcession: boolean;
+  /** The first is written to users.home_campus; the table holds only one. */
   campuses: Campus[];
   mode: TravelMode;
-  carMake: string;
-  fuelType: FuelType | "";
+  /** null for anyone who isn't driving themselves */
+  car: CarDetails | null;
 }
 
 interface OnboardingFormProps {
   defaultName?: string;
   onComplete?: (profile: OnboardingProfile) => void;
+  /** Disables the final button while the profile is being saved. */
+  submitting?: boolean;
 }
 
 const STEP_LABELS = [
@@ -153,106 +165,42 @@ function ModeCard({
   );
 }
 
-interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-}
-
-/* One source of truth for field chrome, so the input and the select can never
-   drift apart on border, radius, padding or focus ring. */
-const FIELD =
-  "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600";
-
-function FieldLabel({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-gray-700">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function TextField({ label, ...props }: TextFieldProps) {
-  return (
-    <FieldLabel label={label}>
-      <input {...props} className={`${FIELD} placeholder-gray-400`} />
-    </FieldLabel>
-  );
-}
-
-interface SelectFieldProps {
-  label: string;
-  placeholder: string;
-  options: readonly string[];
-  value: string;
-  onValueChange: (value: string) => void;
-}
-
-/* A native <select>'s option list is drawn by the OS, so CSS cannot reach it:
-   no radius, no padding, no token colours, and `color-scheme` in globals.css is
-   the only lever over even its light/dark appearance. This is the Radix listbox
-   instead - real DOM we own, so the panel matches the card in any theme, and
-   keyboard navigation and typeahead come from the primitive.
-
-   Radix has no concept of an empty option, so the placeholder lives on
-   SelectValue. "" is passed through rather than collapsed to undefined: Radix
-   already reads it as "nothing chosen", and undefined would make the component
-   uncontrolled until the first pick. */
-function SelectField({
-  label,
-  placeholder,
-  options,
-  value,
-  onValueChange,
-}: SelectFieldProps) {
-  return (
-    <FieldLabel label={label}>
-      <Select value={value} onValueChange={onValueChange}>
-        {/* The trigger ships at h-8 with token colours; these overrides sit it
-            on the same chrome as TextField. `data-[size=default]:h-auto` rather
-            than `h-auto` because the default height is set through a data
-            attribute, which outranks a bare utility. */}
-        <SelectTrigger
-          className={`${FIELD} w-full justify-between data-[size=default]:h-auto data-placeholder:text-gray-400 focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600`}
-        >
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        {/* `popper` drops the panel below the field. The default,
-            `item-aligned`, covers the trigger the way a native select does,
-            which is what made the old menu look like it was floating loose. */}
-        <SelectContent
-          position="popper"
-          align="start"
-          sideOffset={6}
-          className="w-(--radix-select-trigger-width)"
-        >
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </FieldLabel>
-  );
-}
-
 export default function OnboardingForm({
   defaultName = "",
   onComplete = () => {},
+  submitting = false,
 }: OnboardingFormProps) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<OnboardingProfile>({
     name: defaultName,
+    phone: "",
     role: "",
+    isConcession: false,
     campuses: [],
     mode: "",
-    carMake: "",
-    fuelType: "",
+    car: null,
   });
 
-  const needsCar = form.mode === "Drive" || form.mode === "Carpool";
+  /* Drive only. A carpooler rides in someone else's car, so their own make and
+     fuel type describe a vehicle that never makes the trip - the emissions come
+     from the driver's vehicle, which the ride itself already carries. */
+  const needsCarDetails = form.mode === "Drive";
+
+  /* Switching away from Drive drops the car rather than just hiding it.
+     Otherwise a make typed under Drive survives in state and is saved with a
+     Carpool profile, where nothing will ever read it. */
+  const selectMode = (mode: TravelMode) =>
+    setForm((f) => ({
+      ...f,
+      mode,
+      car: mode === "Drive" ? (f.car ?? EMPTY_CAR) : null,
+    }));
+
+  /* Students are on a concession fare by default and staff are not, but the
+     chips below stay editable - a staff member can hold one, and a student may
+     not have registered theirs. */
+  const selectRole = (role: Role) =>
+    setForm((f) => ({ ...f, role, isConcession: role === "Student" }));
 
   const toggleCampus = (campus: Campus) =>
     setForm((f) => ({
@@ -263,9 +211,11 @@ export default function OnboardingForm({
     }));
 
   const canContinue = [
-    form.name.trim().length > 0 && form.role !== "",
+    form.name.trim().length > 0 &&
+      isValidPhone(form.phone) &&
+      form.role !== "",
     form.campuses.length > 0,
-    form.mode !== "" && (!needsCar || form.carMake.trim().length > 0),
+    form.mode !== "" && (!needsCarDetails || isCarUsable(form.car ?? EMPTY_CAR)),
     true,
   ][step];
 
@@ -310,10 +260,6 @@ export default function OnboardingForm({
               <h1 className="text-xl font-bold text-gray-900">
                 Let&rsquo;s set up your profile
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Takes about a minute. This helps us match you with the right
-                rides and work out your CO₂ savings.
-              </p>
             </div>
 
             <TextField
@@ -321,6 +267,18 @@ export default function OnboardingForm({
               placeholder="Your name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+
+            {/* Only shared with a driver once a booking is confirmed, which is
+                worth saying here - it is the one field people hesitate over. */}
+            <TextField
+              label="Mobile"
+              hint="shared only after a booking"
+              placeholder="0412 345 678"
+              inputMode="tel"
+              autoComplete="tel"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
             />
 
             <div>
@@ -332,13 +290,34 @@ export default function OnboardingForm({
                   label="Student"
                   icon={GraduationCap}
                   selected={form.role === "Student"}
-                  onClick={() => setForm((f) => ({ ...f, role: "Student" }))}
+                  onClick={() => selectRole("Student")}
                 />
                 <Chip
                   label="Staff"
                   icon={Briefcase}
                   selected={form.role === "Staff"}
-                  onClick={() => setForm((f) => ({ ...f, role: "Staff" }))}
+                  onClick={() => selectRole("Staff")}
+                />
+              </div>
+            </div>
+
+            {/* Asked outright rather than inferred. Picking a role sets the
+                usual answer, but concession status is the user's to state: it
+                decides which myki fare every comparison is priced against. */}
+            <div>
+              <span className="mb-2 block text-sm font-medium text-gray-700">
+                Do you travel on a concession fare?
+              </span>
+              <div className="flex gap-2">
+                <Chip
+                  label="Yes"
+                  selected={form.isConcession}
+                  onClick={() => setForm((f) => ({ ...f, isConcession: true }))}
+                />
+                <Chip
+                  label="No"
+                  selected={!form.isConcession}
+                  onClick={() => setForm((f) => ({ ...f, isConcession: false }))}
                 />
               </div>
             </div>
@@ -353,19 +332,19 @@ export default function OnboardingForm({
                 Which campuses do you travel to?
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Select all that apply. We&rsquo;ll show you rides on these routes
-                first.
+                Select all that apply. The first one you pick becomes your home
+                campus, and we&rsquo;ll show you rides on these routes first.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               {CAMPUSES.map((campus) => (
                 <Chip
-                  key={campus}
-                  label={campus}
+                  key={campus.value}
+                  label={campus.label}
                   icon={MapPin}
-                  selected={form.campuses.includes(campus)}
-                  onClick={() => toggleCampus(campus)}
+                  selected={form.campuses.includes(campus.value)}
+                  onClick={() => toggleCampus(campus.value)}
                 />
               ))}
             </div>
@@ -390,49 +369,29 @@ export default function OnboardingForm({
                 description="Mostly drive myself"
                 icon={Car}
                 selected={form.mode === "Drive"}
-                onClick={() => setForm((f) => ({ ...f, mode: "Drive" }))}
+                onClick={() => selectMode("Drive")}
               />
               <ModeCard
                 label="Carpool"
                 description="Ride with others"
                 icon={Users}
                 selected={form.mode === "Carpool"}
-                onClick={() => setForm((f) => ({ ...f, mode: "Carpool" }))}
+                onClick={() => selectMode("Carpool")}
               />
               <ModeCard
                 label="Public transport"
                 description="Bus, train, tram"
                 icon={Bus}
                 selected={form.mode === "Public Transport"}
-                onClick={() =>
-                  setForm((f) => ({ ...f, mode: "Public Transport" }))
-                }
+                onClick={() => selectMode("Public Transport")}
               />
             </div>
 
-            {needsCar && (
-              <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">
-                  Used to estimate CO₂ saved on shared trips.
-                </p>
-                <TextField
-                  label="Car make & model"
-                  placeholder="e.g. Toyota Corolla Hybrid"
-                  value={form.carMake}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, carMake: e.target.value }))
-                  }
-                />
-                <SelectField
-                  label="Fuel type"
-                  placeholder="Select fuel type"
-                  options={FUEL_TYPES}
-                  value={form.fuelType}
-                  onValueChange={(fuelType) =>
-                    setForm((f) => ({ ...f, fuelType: fuelType as FuelType }))
-                  }
-                />
-              </div>
+            {needsCarDetails && (
+              <VehiclePicker
+                value={form.car ?? EMPTY_CAR}
+                onChange={(car) => setForm((f) => ({ ...f, car }))}
+              />
             )}
           </div>
         )}
@@ -453,16 +412,31 @@ export default function OnboardingForm({
               {(
                 [
                   ["Name", form.name || "—"],
+                  ["Mobile", form.phone || "—"],
                   ["Role", form.role || "—"],
+                  ["Fare", form.isConcession ? "Concession" : "Full"],
                   [
-                    "Campuses",
-                    form.campuses.length ? form.campuses.join(", ") : "—",
+                    "Home campus",
+                    campusLabel(form.campuses[0]) || "—",
+                  ],
+                  [
+                    "Also travels to",
+                    form.campuses.slice(1).map(campusLabel).join(", ") || "—",
                   ],
                   ["Travel mode", form.mode || "—"],
-                  ...(needsCar
+                  ...(needsCarDetails && form.car
                     ? ([
-                        ["Car", form.carMake || "—"],
-                        ["Fuel type", form.fuelType || "—"],
+                        [
+                          "Car",
+                          [form.car.make, form.car.model, form.car.year]
+                            .filter(Boolean)
+                            .join(" ") || "—",
+                        ],
+                        ["Fuel type", fuelTypeLabel(form.car.fuelType) || "—"],
+                        [
+                          "Consumption",
+                          `${form.car.fuelConsumption} ${consumptionUnit(form.car.fuelType)}`,
+                        ],
                       ] as [string, string][])
                     : []),
                 ] as [string, string][]
@@ -476,14 +450,6 @@ export default function OnboardingForm({
                 </div>
               ))}
             </dl>
-
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3">
-              <Leaf className="h-4 w-4 text-emerald-600 shrink-0" />
-              <p className="text-xs text-emerald-800">
-                We&rsquo;ll use this to start tracking your CO₂ avoided from your very
-                first trip.
-              </p>
-            </div>
           </div>
         )}
 
@@ -505,14 +471,18 @@ export default function OnboardingForm({
           <button
             type="button"
             onClick={handlePrimary}
-            disabled={!canContinue}
+            disabled={!canContinue || submitting}
             className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
-              canContinue
+              canContinue && !submitting
                 ? "bg-gray-900 text-white hover:bg-gray-800"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            {isLastStep ? "Finish setup" : "Continue"}
+            {isLastStep
+              ? submitting
+                ? "Saving\u2026"
+                : "Finish setup"
+              : "Continue"}
           </button>
         </div>
       </div>

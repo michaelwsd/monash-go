@@ -47,3 +47,8 @@ class InvalidInputError(DomainError):
     """input is well-formed but violates a business rule"""
 
     status_code = 400
+
+class UpstreamServiceError(DomainError):
+    """an external API we depend on failed, timed out, or refused us"""
+
+    status_code = 502

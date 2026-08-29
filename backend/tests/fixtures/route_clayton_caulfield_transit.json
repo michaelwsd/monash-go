@@ -1,0 +1,189 @@
+{
+    "routes": [
+        {
+            "legs": [
+                {
+                    "steps": [
+                        {
+                            "distanceMeters": 387,
+                            "staticDuration": "294s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 201,
+                            "staticDuration": "146s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 102,
+                            "staticDuration": "77s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 268,
+                            "staticDuration": "203s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 150,
+                            "staticDuration": "119s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 121,
+                            "staticDuration": "104s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 5225,
+                            "staticDuration": "720s",
+                            "transitDetails": {
+                                "stopDetails": {
+                                    "arrivalStop": {
+                                        "name": "Stud Park SC/Stud Rd",
+                                        "location": {
+                                            "latLng": {
+                                                "latitude": -37.9181849,
+                                                "longitude": 145.2351519
+                                            }
+                                        }
+                                    },
+                                    "arrivalTime": "2026-09-15T22:30:00Z",
+                                    "departureStop": {
+                                        "name": "Kemp Ct/Dandelion Dr",
+                                        "location": {
+                                            "latLng": {
+                                                "latitude": -37.9217036,
+                                                "longitude": 145.2687876
+                                            }
+                                        }
+                                    },
+                                    "departureTime": "2026-09-15T22:18:00Z"
+                                },
+                                "localizedValues": {
+                                    "arrivalTime": {
+                                        "time": {
+                                            "text": "8:30\u202fAM"
+                                        },
+                                        "timeZone": "Australia/Melbourne"
+                                    },
+                                    "departureTime": {
+                                        "time": {
+                                            "text": "8:18\u202fAM"
+                                        },
+                                        "timeZone": "Australia/Melbourne"
+                                    }
+                                },
+                                "headsign": "Waverley Gardens SC",
+                                "transitLine": {
+                                    "agencies": [
+                                        {
+                                            "name": "Transport Victoria",
+                                            "phoneNumber": "+61 1800 800 007",
+                                            "uri": "https://transport.vic.gov.au/?utm_source=open_data_click_agency&utm_medium=open_data_agency_click&utm_campaign=open_data_click"
+                                        }
+                                    ],
+                                    "name": "Boronia - Waverley Gardens SC",
+                                    "color": "#f27b00",
+                                    "nameShort": "691",
+                                    "textColor": "#ffffff",
+                                    "vehicle": {
+                                        "name": {
+                                            "text": "Bus"
+                                        },
+                                        "type": "BUS",
+                                        "iconUri": "//maps.gstatic.com/mapfiles/transit/iw2/6/bus2.png"
+                                    }
+                                },
+                                "stopCount": 16
+                            },
+                            "travelMode": "TRANSIT"
+                        },
+                        {
+                            "distanceMeters": 21740,
+                            "staticDuration": "3540s",
+                            "transitDetails": {
+                                "stopDetails": {
+                                    "arrivalStop": {
+                                        "name": "Caulfield Railway Station/Sir John Monash Dr",
+                                        "location": {
+                                            "latLng": {
+                                                "latitude": -37.87734,
+                                                "longitude": 145.04315
+                                            }
+                                        }
+                                    },
+                                    "arrivalTime": "2026-09-15T23:41:00Z",
+                                    "departureStop": {
+                                        "name": "Stud Park SC/Stud Rd",
+                                        "location": {
+                                            "latLng": {
+                                                "latitude": -37.9181849,
+                                                "longitude": 145.2351519
+                                            }
+                                        }
+                                    },
+                                    "departureTime": "2026-09-15T22:42:00Z"
+                                },
+                                "localizedValues": {
+                                    "arrivalTime": {
+                                        "time": {
+                                            "text": "9:41\u202fAM"
+                                        },
+                                        "timeZone": "Australia/Melbourne"
+                                    },
+                                    "departureTime": {
+                                        "time": {
+                                            "text": "8:42\u202fAM"
+                                        },
+                                        "timeZone": "Australia/Melbourne"
+                                    }
+                                },
+                                "headsign": "Caulfield",
+                                "transitLine": {
+                                    "agencies": [
+                                        {
+                                            "name": "Transport Victoria",
+                                            "phoneNumber": "+61 1800 800 007",
+                                            "uri": "https://transport.vic.gov.au/?utm_source=open_data_click_agency&utm_medium=open_data_agency_click&utm_campaign=open_data_click"
+                                        }
+                                    ],
+                                    "name": "Stud Park SC (Rowville) - Caulfield",
+                                    "color": "#f27b00",
+                                    "nameShort": "900",
+                                    "textColor": "#ffffff",
+                                    "vehicle": {
+                                        "name": {
+                                            "text": "Bus"
+                                        },
+                                        "type": "BUS",
+                                        "iconUri": "//maps.gstatic.com/mapfiles/transit/iw2/6/bus2.png"
+                                    }
+                                },
+                                "stopCount": 21
+                            },
+                            "travelMode": "TRANSIT"
+                        },
+                        {
+                            "distanceMeters": 32,
+                            "staticDuration": "25s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 53,
+                            "staticDuration": "43s",
+                            "travelMode": "WALK"
+                        },
+                        {
+                            "distanceMeters": 96,
+                            "staticDuration": "86s",
+                            "travelMode": "WALK"
+                        }
+                    ]
+                }
+            ],
+            "distanceMeters": 28375,
+            "duration": "6085s"
+        }
+    ]
+}

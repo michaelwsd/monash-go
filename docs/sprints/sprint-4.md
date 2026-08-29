@@ -62,7 +62,7 @@ function below exists. That's expected — it's the target you're building towar
 
 **Then implement:**
 - `app/services/booking_service.py` — raises `RideFullError`, `AlreadyBookedError`.
-- `app/api/v1/bookings.py` — `POST /bookings`, `DELETE /bookings/{id}`, `GET /bookings/me`.
+- `app/api/routes/bookings.py` — `POST /bookings`, `DELETE /bookings/{id}`, `GET /bookings/me`.
 - The phone-number rule is enforced by which response schema a route declares (`CLAUDE.md`'s
   standing rule: "Every route declares its response schema. That is what stops a phone number
   leaking.") — don't reach for a manual `if` that strips the field ad hoc, use two distinct response

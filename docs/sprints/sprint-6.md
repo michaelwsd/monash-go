@@ -36,7 +36,7 @@ trail to unwind afterwards.
 **Then implement:**
 - `app/repositories/rewards_repository.py`.
 - `app/services/rewards_service.py` — award once on the `completed` transition.
-- `app/api/v1/rewards.py` — `GET /rewards/me`.
+- `app/api/routes/rewards.py` — `GET /rewards/me`.
 
 ### 2. Pet accessories
 
@@ -56,7 +56,7 @@ trail to unwind afterwards.
   Sprint 2's Tesla/Corolla/F-150 point values before committing the migration.
 - `app/repositories/pet_repository.py`.
 - `app/services/pet_service.py` — raises `InsufficientPointsError`, `StageLockedError`.
-- `app/api/v1/pet.py` — shop listing, buy, equip, `GET /pet/me`.
+- `app/api/routes/pet.py` — shop listing, buy, equip, `GET /pet/me`.
 
 ### 3. Deploy — the one non-TDD part of this sprint
 

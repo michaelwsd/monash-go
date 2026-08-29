@@ -85,16 +85,30 @@ Two concurrent misses on the same pair will make two calls and two upserts. The 
 makes that safe, only mildly wasteful, and it is not worth locking for at this scale — but say so
 in a comment so nobody later mistakes it for a bug.
 
-**Open decision — what `departureTime` a lazy transit fetch asks for.** A transit route is only
-meaningful for a specific departure time, and one row per `(origin, destination, transit)` cannot
-hold both an 8am and an 11pm journey. Fetching with *now* means the row holds whatever time the
-last cache miss happened at, so two students comparing the same ride hours apart see different
-figures — the same non-reproducibility `sprint-5.md` guards against for fuel prices. Options:
-(a) add a departure-hour bucket to the cache key and fetch the ride's actual time, correct but
-needs a migration; (b) always fetch a canonical next-weekday-08:00 journey, one row per pair,
-predictably wrong for off-peak rather than unpredictably wrong; (c) fetch with *now*. **(b) is
-recommended for this sprint**, with (a) recorded as the honest upgrade for Sprint 5. Under (b) the
-TTL is only picking up timetable revisions, so it can be far longer than an hour.
+**Decision, 29/08/26 - a lazy transit fetch asks for the next weekday at 08:00, Melbourne time.**
+A transit route is only meaningful for a specific departure time, and one row per
+`(origin, destination, transit)` cannot hold both an 8am and an 11pm journey. Fetching with *now*
+would leave the row holding whatever time the last cache miss happened at, so two students
+comparing the same ride hours apart would see different figures, the same non-reproducibility
+`sprint-5.md` guards against for fuel prices. A canonical departure is predictably wrong for
+off-peak travel rather than unpredictably wrong for everyone, and it keeps one row per pair, so no
+migration is needed now.
+
+What follows from it:
+
+- `app/clients/maps.py` owns the rule and nothing above it passes a departure time in. Expose the
+  calculation as a pure helper, `next_weekday_0800(now)`, so it can be unit tested without HTTP:
+  a Friday evening and any weekend `now` both give Monday 08:00; a weekday afternoon gives
+  tomorrow 08:00; all in `ZoneInfo("Australia/Melbourne")`.
+- The Sprint 5 dashboard must label the transit figures as an 8am weekday service. Unlabelled,
+  the number reads as a promise about the user's own trip.
+- The TTL is one day, settled 29/08/26. Two misses on the same day request an identical journey,
+  so anything shorter buys only repeated paid calls returning the same figures; the answer can
+  first change when the date rolls over. `TRANSIT_CACHE_TTL` in `core/constants.py` and both
+  `CLAUDE.md` mentions now agree on it.
+- The honest upgrade, deferred to Sprint 5: add a departure-hour bucket to the cache key and fetch
+  the ride's actual departure time. That needs a migration to the `campus_routes` unique
+  constraint, which is why it is not in this sprint.
 
 ### 3. Ride creation and search
 

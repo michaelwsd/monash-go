@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MonashGO API Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* ---- tokens: light is the base, complete on bare :root ---- */
+:root {
+  --paper:      #f6f8f8;
+  --surface:    #ffffff;
+  --surface-2:  #eef2f2;
+  --ink:        #101619;
+  --ink-2:      #3d4a4e;
+  --ink-3:      #6b7b80;
+  --rule:       #d8e0e0;
+  --rule-soft:  #e7eded;
+
+  --accent:     #0d6d68;
+  --accent-ink: #0a5450;
+  --accent-bg:  #e2efee;
+  --reject:     #a3341f;
+  --reject-bg:  #f7e8e4;
+  --ochre:      #8a6414;
+  --ochre-bg:   #f4eddc;
+  --slate:      #5a6b70;
+  --slate-bg:   #e8edee;
+
+  --measure: 68ch;
+  --radius: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0b1013;
+    --surface:    #121a1d;
+    --surface-2:  #182226;
+    --ink:        #e4ecec;
+    --ink-2:      #adbdbf;
+    --ink-3:      #7e9094;
+    --rule:       #253134;
+    --rule-soft:  #1b2528;
+
+    --accent:     #58c3ba;
+    --accent-ink: #7ad6cd;
+    --accent-bg:  #102a29;
+    --reject:     #e08b74;
+    --reject-bg:  #2c1712;
+    --ochre:      #d3a842;
+    --ochre-bg:   #2a2213;
+    --slate:      #9aacb0;
+    --slate-bg:   #1a2326;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0b1013;
+  --surface:    #121a1d;
+  --surface-2:  #182226;
+  --ink:        #e4ecec;
+  --ink-2:      #adbdbf;
+  --ink-3:      #7e9094;
+  --rule:       #253134;
+  --rule-soft:  #1b2528;
+
+  --accent:     #58c3ba;
+  --accent-ink: #7ad6cd;
+  --accent-bg:  #102a29;
+  --reject:     #e08b74;
+  --reject-bg:  #2c1712;
+  --ochre:      #d3a842;
+  --ochre-bg:   #2a2213;
+  --slate:      #9aacb0;
+  --slate-bg:   #1a2326;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 16.5px;
+  line-height: 1.65;
+  font-feature-settings: "kern";
+}
+
+.wrap {
+  max-width: 74rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 3rem) 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3.25rem;
+}
+.measure { max-width: var(--measure); }
+
+h1, h2, h3 {
+  font-family: "IBM Plex Serif", ui-serif, Georgia, serif;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.2;
+}
+h1 { font-size: clamp(1.95rem, 4.2vw, 2.9rem); letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.03rem; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent-ink); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+code, .mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86em;
+}
+p code, li code, td code, dd code {
+  background: var(--surface-2);
+  padding: 0.1em 0.34em;
+  border-radius: var(--radius);
+}
+section { display: flex; flex-direction: column; gap: 1.15rem; }
+.lede { color: var(--ink-2); font-size: 1.06rem; }
+.stack { display: flex; flex-direction: column; gap: 0.85rem; }
+
+/* ---- masthead ---- */
+header.masthead {
+  display: flex; flex-direction: column; gap: 1.1rem;
+  padding-bottom: 2.25rem;
+  border-bottom: 2px solid var(--ink);
+}
+.stamp {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem;
+}
+
+/* ---- index ---- */
+.index {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.index a {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  gap: 0.2rem 0.9rem;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--rule-soft);
+  text-decoration: none;
+  color: var(--ink);
+  align-items: baseline;
+}
+.index a:first-child { border-top: 0; }
+.index a:hover { background: var(--surface-2); }
+.index .ipath { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+.index .iwhat { grid-column: 2; color: var(--ink-3); font-size: 0.84rem; }
+
+/* ---- method chips ---- */
+.verb {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.16rem 0.42rem;
+  border-radius: var(--radius);
+  text-transform: uppercase;
+  white-space: nowrap;
+  justify-self: start;
+}
+.v-get    { background: var(--slate-bg);  color: var(--slate); }
+.v-post   { background: var(--accent-bg); color: var(--accent-ink); }
+.v-patch  { background: var(--ochre-bg);  color: var(--ochre); }
+.v-put    { background: var(--ochre-bg);  color: var(--ochre); }
+.v-delete { background: var(--reject-bg); color: var(--reject); }
+
+/* ---- endpoint ---- */
+.endpoint {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  scroll-margin-top: 1.5rem;
+}
+.ep-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid var(--rule-soft);
+  background: var(--surface-2);
+}
+.ep-path {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.94rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.ep-path .dim { color: var(--ink-3); }
+.badge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.16rem 0.44rem;
+  border-radius: var(--radius);
+  border: 1px solid currentColor;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.b-auth { color: var(--accent-ink); }
+.b-open { color: var(--slate); }
+.ep-body { padding: 1.15rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.ep-body > p { max-width: var(--measure); }
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 1.1rem;
+}
+.col { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+
+/* ---- code blocks ---- */
+pre {
+  margin: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  overflow-x: auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+pre .k { color: var(--accent-ink); }
+pre .c { color: var(--ink-3); }
+
+/* ---- tables ---- */
+.tablewrap { overflow-x: auto; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  min-width: 26rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+}
+th {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+  border-bottom: 1px solid var(--rule);
+}
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.name { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; }
+.req { color: var(--reject); font-size: 0.72rem; font-family: "IBM Plex Mono", monospace; }
+
+/* ---- notes ---- */
+.note {
+  border-left: 2px solid var(--ochre);
+  background: var(--ochre-bg);
+  padding: 0.75rem 0.95rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  max-width: var(--measure);
+}
+.note strong { color: var(--ink); }
+
+/* ---- planned ---- */
+.planned {
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  padding: 0.35rem 1rem;
+  background: transparent;
+}
+.planned .row {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr) auto;
+  gap: 0.2rem 0.9rem;
+  align-items: baseline;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--rule-soft);
+  color: var(--ink-3);
+}
+.planned .row:first-child { border-top: 0; }
+.planned .ppath { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+.planned .sprint { font-size: 0.72rem; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding-top: 1.5rem;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+  max-width: var(--measure);
+}
+
+@media (max-width: 34rem) {
+  .index a, .planned .row { grid-template-columns: minmax(0, 1fr); }
+  .index .iwhat { grid-column: 1; }
+  .planned .sprint { grid-column: 1; }
+  .badge { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">MonashGO &middot; backend</div>
+    <h1>API Reference</h1>
+    <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
+      running route table rather than the plan. Seven are callable; the twelve at the bottom are
+      specified but not built, and calling one returns a 404 from the router, not from your code.</p>
+    <div class="stamp">
+      <span>base <code>/api/v1</code></span>
+      <span>7 live endpoints</span>
+      <span>generated 29 Aug 2026</span>
+    </div>
+  </header>
+
+  <section id="basics">
+    <div class="eyebrow">Before anything else</div>
+    <h2>Calling the API</h2>
+    <p class="measure">Everything except <code>/health</code> sits under <code>/api/v1</code> and
+      requires a Clerk session token. The backend verifies it locally with Clerk's RS256 public
+      key, so there is no network call to Clerk per request and no session state on the server.</p>
+
+    <div class="cols">
+      <div class="col">
+        <div class="eyebrow">Every authenticated request</div>
+<pre><span class="c"># the token comes from Clerk on the frontend</span>
+Authorization: Bearer &lt;clerk_jwt&gt;
+Content-Type: application/json</pre>
+      </div>
+      <div class="col">
+        <div class="eyebrow">Every error, one shape</div>
+<pre>{ <span class="k">"detail"</span>: "a Monash email address is required" }</pre>
+      </div>
+    </div>
+
+    <p class="measure">The token must carry <code>sub</code>, <code>email</code>,
+      <code>full_name</code>, <code>exp</code> and <code>iss</code>. A token missing any of them is
+      rejected with the same 401 as an expired or forged one, deliberately: the caller learns that
+      it failed, not which check caught it.</p>
+
+    <div class="note"><strong>Interactive docs.</strong> The app serves Swagger at
+      <code>/docs</code> and ReDoc at <code>/redoc</code>, but only when
+      <code>ENVIRONMENT</code> is not <code>production</code>. Both are switched off on the
+      deployed build.</div>
+  </section>
+
+  <section id="index">
+    <div class="eyebrow">The seven</div>
+    <h2>What you can call today</h2>
+    <nav class="index" aria-label="Endpoint index">
+      <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
+      <a href="#users-sync"><span class="verb v-post">post</span><span class="ipath">/api/v1/users/sync</span><span class="iwhat">create or refresh the caller's user row</span></a>
+      <a href="#users-me"><span class="verb v-patch">patch</span><span class="ipath">/api/v1/users/me</span><span class="iwhat">update phone, concession, home campus</span></a>
+      <a href="#vehicles-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/vehicles</span><span class="iwhat">register a car, promotes the user to driver</span></a>
+      <a href="#vehicles-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/me</span><span class="iwhat">the caller's registered cars</span></a>
+      <a href="#reference"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference</span><span class="iwhat">look up fuel consumption by make and model</span></a>
+      <a href="#similar"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference/similar</span><span class="iwhat">near matches when the exact car is absent</span></a>
+    </nav>
+  </section>
+
+  <section id="system">
+    <div class="eyebrow">System</div>
+    <h2>Health</h2>
+
+    <article class="endpoint" id="health">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/health</span>
+        <span class="badge b-open">no auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Registered on the app itself rather than the versioned router, because a health check
+          should not move when the API version does. Used by Render and by the GitHub Actions
+          keep-alive.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /health</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"status"</span>: "ok",
+  <span class="k">"environment"</span>: "development"
+}</pre>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section id="users">
+    <div class="eyebrow">Users</div>
+    <h2>Identity and profile</h2>
+
+    <article class="endpoint" id="users-sync">
+      <div class="ep-head">
+        <span class="verb v-post">post</span>
+        <span class="ep-path">/api/v1/users/sync</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Takes no body: everything it needs is in the token. Call it on every page load. On a
+          first sign-in it creates the <code>users</code> row and the matching
+          <code>rewards</code> row; afterwards it refreshes <code>email</code> and
+          <code>full_name</code> if they changed in Clerk, and otherwise returns the row untouched.
+          Safe to call repeatedly, including twice at once.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>POST /api/v1/users/sync
+Authorization: Bearer &lt;clerk_jwt&gt;
+
+<span class="c">// no body</span></pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"id"</span>: "3f1c…",
+  <span class="k">"email"</span>: "abcd0001@student.monash.edu",
+  <span class="k">"phone"</span>: "",
+  <span class="k">"full_name"</span>: "Alex Nguyen",
+  <span class="k">"role"</span>: "passenger",
+  <span class="k">"is_concession"</span>: false,
+  <span class="k">"home_campus"</span>: null,
+  <span class="k">"green_points"</span>: 0,
+  <span class="k">"joined_at"</span>: "2026-08-29T04:12:55Z"
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">401</td><td>No bearer token, or it fails verification</td></tr>
+              <tr><td class="num">403</td><td>The token's email is not <code>@student.monash.edu</code> or <code>@monash.edu</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>New users arrive incomplete.</strong> <code>phone</code> is an
+          empty string and <code>home_campus</code> is null until the onboarding form calls
+          <code>PATCH /users/me</code>. Treat both as "not set yet", not as bad data.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="users-me">
+      <div class="ep-head">
+        <span class="verb v-patch">patch</span>
+        <span class="ep-path">/api/v1/users/me</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>A partial update: send only the fields you are changing. Unknown fields are rejected
+          rather than ignored, so a typo fails loudly instead of silently doing nothing.
+          <code>email</code> and <code>full_name</code> are absent because Clerk owns them, and
+          <code>green_points</code> because the rewards engine does.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request body</div>
+<pre>{
+  <span class="k">"phone"</span>: "0412 345 678",
+  <span class="k">"is_concession"</span>: true,
+  <span class="k">"home_campus"</span>: "clayton"
+}</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre><span class="c">// the full updated user, same
+// shape as POST /users/sync</span></pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Rules</th></tr></thead>
+            <tbody>
+              <tr><td class="name">phone</td><td>string</td><td>Australian mobile or landline; spaces are stripped, so <code>0412 345 678</code> is stored as <code>0412345678</code></td></tr>
+              <tr><td class="name">is_concession</td><td>boolean</td><td>Selects the myki fare in every cost comparison</td></tr>
+              <tr><td class="name">home_campus</td><td>campus</td><td>One of the five campus values</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">404</td><td>No user row for this token; call <code>/users/sync</code> first</td></tr>
+              <tr><td class="num">422</td><td>Badly shaped phone number, unknown campus, or a field the schema does not allow</td></tr>
+              <tr><td class="num">500</td><td>Explicitly sending <code>"phone": null</code>, which is treated as an attempt to clear it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Known rough edge.</strong> Clearing the phone raises the base
+          <code>DomainError</code>, which maps to 500. It is a client mistake, so 400 would be the
+          honest code: <code>InvalidInputError</code> in
+          <code>user_service.update_profile</code> would fix it. Omit the field entirely to leave
+          the phone alone.</div>
+      </div>
+    </article>
+  </section>
+
+  <section id="vehicles">
+    <div class="eyebrow">Vehicles</div>
+    <h2>Cars and the reference dataset</h2>
+
+    <article class="endpoint" id="vehicles-create">
+      <div class="ep-head">
+        <span class="verb v-post">post</span>
+        <span class="ep-path">/api/v1/vehicles</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Registers a car and, if the user was still a <code>passenger</code>, promotes them to
+          <code>driver</code>. Owning a car is the first unambiguous signal that someone intends to
+          drive.</p>
+        <p>There are two ways in. If the driver picked one of the suggestions you showed them, send
+          its <code>reference_id</code> and the reference row wins for every field. Otherwise they
+          typed it by hand: the backend looks for an exact match on make, model, year and fuel type,
+          and uses the reference figure if it finds one.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request body</div>
+<pre>{
+  <span class="k">"make"</span>: "Toyota",
+  <span class="k">"model"</span>: "Corolla",
+  <span class="k">"year"</span>: 2020,
+  <span class="k">"fuel_type"</span>: "petrol",
+  <span class="k">"fuel_consumption"</span>: 7.1,
+  <span class="k">"reference_id"</span>: null
+}</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">201</div>
+<pre>{
+  <span class="k">"id"</span>: "9a2e…",
+  <span class="k">"make"</span>: "Toyota",
+  <span class="k">"model"</span>: "Corolla XSE",
+  <span class="k">"year"</span>: 2020,
+  <span class="k">"fuel_type"</span>: "petrol",
+  <span class="k">"fuel_consumption"</span>: 7.1,
+  <span class="k">"created_at"</span>: "2026-08-29T04:20:10Z"
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Rules</th></tr></thead>
+            <tbody>
+              <tr><td class="name">make <span class="req">req</span></td><td>string</td><td>1 to 60 characters</td></tr>
+              <tr><td class="name">model <span class="req">req</span></td><td>string</td><td>1 to 60 characters</td></tr>
+              <tr><td class="name">year <span class="req">req</span></td><td>integer</td><td>1950 to 2100</td></tr>
+              <tr><td class="name">fuel_type <span class="req">req</span></td><td>fuel_type</td><td>petrol, diesel, hybrid or electric</td></tr>
+              <tr><td class="name">fuel_consumption <span class="req">req</span></td><td>float</td><td>Above 0, at most 30 L/100km, or 45 kWh/100km for electric</td></tr>
+              <tr><td class="name">reference_id</td><td>integer</td><td>Optional. Set it when the driver picked a suggestion</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">400</td><td>Consumption above the ceiling for that fuel type</td></tr>
+              <tr><td class="num">404</td><td><code>reference_id</code> matches no reference row, or the caller has no user row</td></tr>
+              <tr><td class="num">422</td><td>Missing field, unknown fuel type, year out of range</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>The response can differ from what you sent.</strong> When a
+          reference row matches, its make, model, year, fuel type and consumption replace the typed
+          values, which is why the example above answers <code>"Corolla XSE"</code> to a request
+          that said <code>"Corolla"</code>. Render the response, not the form state.</div>
+        <div class="note"><strong>A car missing from the dataset still registers.</strong> The
+          reference data is Canadian, so MG, GWM, BYD, LDV, Chery, Haval and most utes are absent,
+          around 12% of the 2025 Australian market. The typed <code>fuel_consumption</code> is used
+          as given. Never make the lookup a precondition in the UI.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="vehicles-me">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/vehicles/me</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Every car the caller owns, newest first. An empty array is the normal answer for someone
+          who has not registered one, not an error.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/vehicles/me</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  { <span class="k">"id"</span>: "9a2e…", <span class="k">"make"</span>: "Toyota", … }
+]</pre>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="reference">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/vehicles/reference</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Searches the 17,344-row reference table so the driver does not have to know their own
+          fuel consumption. Narrow it as the form fills in: make alone, then make and model, then
+          the year.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/vehicles/reference
+      ?make=Toyota
+      &amp;model=Corolla
+      &amp;year=2020</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  {
+    <span class="k">"id"</span>: 4821,
+    <span class="k">"make"</span>: "Toyota",
+    <span class="k">"model"</span>: "Corolla XSE",
+    <span class="k">"year"</span>: 2020,
+    <span class="k">"fuel_type"</span>: "petrol",
+    <span class="k">"engine_size"</span>: 1.8,
+    <span class="k">"avg_consumption"</span>: 7.1
+  }
+]</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Query</th><th>Type</th><th>Rules</th></tr></thead>
+            <tbody>
+              <tr><td class="name">make <span class="req">req</span></td><td>string</td><td>At least 1 character</td></tr>
+              <tr><td class="name">model</td><td>string</td><td>Optional</td></tr>
+              <tr><td class="name">year</td><td>integer</td><td>Optional, 1950 to 2100</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Units depend on <code>fuel_type</code>.</strong>
+          <code>avg_consumption</code> is L/100km for petrol, diesel and hybrid, but kWh/100km for
+          electric. Label it in the UI by branching on the fuel type; treating an EV's figure as
+          litres makes its running cost roughly ten times too low.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="similar">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/vehicles/reference/similar</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>The fallback when the exact car is not in the dataset. It relaxes the search in three
+          steps and returns the first step that finds anything, closest year first, capped at ten
+          results. Each carries the reason it matched, which is meant to be shown: the driver is
+          being asked to accept a car that is not quite theirs.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/vehicles/reference/similar
+      ?make=Toyota
+      &amp;model=Corolla
+      &amp;year=2019
+      &amp;fuel_type=petrol</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  {
+    <span class="k">"reference"</span>: { <span class="k">"id"</span>: 4821, … },
+    <span class="k">"match_reason"</span>: "same model, different year"
+  }
+]</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Tier</th><th>Relaxes to</th><th>match_reason</th></tr></thead>
+            <tbody>
+              <tr><td class="num">1</td><td>Same make and model, any year</td><td>same model, different year</td></tr>
+              <tr><td class="num">2</td><td>Similar model name, same fuel type</td><td>similar model, same fuel type</td></tr>
+              <tr><td class="num">3</td><td>Same make and fuel type</td><td>same make and fuel type</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>All four query parameters are required here, unlike the plain reference search. An empty
+          array means all three tiers came back empty: fall back to manual entry.</p>
+      </div>
+    </article>
+  </section>
+
+  <section id="errors">
+    <div class="eyebrow">Errors</div>
+    <h2>Status codes</h2>
+    <p class="measure">Services raise domain errors and never <code>HTTPException</code>; one
+      handler registered on the base class maps each to a status and returns
+      <code>{"detail": "…"}</code>. 422 is the exception - it comes from FastAPI's own request
+      validation and carries Pydantic's error list instead.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Code</th><th>Error</th><th>Means</th></tr></thead>
+        <tbody>
+          <tr><td class="num">400</td><td class="name">InvalidInputError</td><td>Well-formed, but breaks a business rule</td></tr>
+          <tr><td class="num">401</td><td class="name">InvalidCredentialsError</td><td>Token missing, malformed, expired, or not signed by Clerk</td></tr>
+          <tr><td class="num">403</td><td class="name">PermissionDeniedError</td><td>Authenticated, but not allowed. Today: a non-Monash email</td></tr>
+          <tr><td class="num">404</td><td class="name">NotFoundError</td><td>Does not exist, or the caller may not know that it does</td></tr>
+          <tr><td class="num">422</td><td class="name">FastAPI validation</td><td>Body or query does not match the schema</td></tr>
+          <tr><td class="num">500</td><td class="name">DomainError</td><td>A rule with no more specific subclass. Treat as a bug</td></tr>
+          <tr><td class="num">502</td><td class="name">UpstreamServiceError</td><td>Google Maps or Servo Saver failed, timed out, or refused us</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="enums">
+    <div class="eyebrow">Vocabulary</div>
+    <h2>Enum values</h2>
+    <p class="measure">Sent and returned as lowercase strings. These are the only accepted values;
+      anything else is a 422.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Enum</th><th>Values</th></tr></thead>
+        <tbody>
+          <tr><td class="name">campus</td><td><code>clayton</code> <code>caulfield</code> <code>peninsula</code> <code>parkville</code> <code>city</code></td></tr>
+          <tr><td class="name">user_role</td><td><code>passenger</code> <code>driver</code> <code>both</code></td></tr>
+          <tr><td class="name">fuel_type</td><td><code>petrol</code> <code>diesel</code> <code>hybrid</code> <code>electric</code></td></tr>
+          <tr><td class="name">travel_mode</td><td><code>drive</code> <code>transit</code></td></tr>
+          <tr><td class="name">transit_mode</td><td><code>train</code> <code>bus</code> <code>tram</code> <code>walk</code></td></tr>
+          <tr><td class="name">pet_stage</td><td><code>egg</code> <code>hatched</code> <code>juvenile</code> <code>adult</code> <code>legendary</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure"><code>ride_status</code>, <code>booking_status</code> and
+      <code>accessory_category</code> exist in the database but no endpoint returns them yet.</p>
+  </section>
+
+  <section id="planned">
+    <div class="eyebrow">Not built yet</div>
+    <h2>Specified, not callable</h2>
+    <p class="measure">These are in <code>CLAUDE.md</code> and the sprint plan but are not mounted
+      on the router. A request to any of them gets a 404 from FastAPI before reaching any of your
+      code, so do not build against them yet.</p>
+    <div class="planned">
+      <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/rides</span><span class="sprint">sprint 3</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rides/search</span><span class="sprint">sprint 3</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rides/{ride_id}</span><span class="sprint">sprint 3</span></div>
+      <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/bookings</span><span class="sprint">sprint 4</span></div>
+      <div class="row"><span class="verb v-delete">del</span><span class="ppath">/api/v1/bookings/{booking_id}</span><span class="sprint">sprint 4</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/bookings/me</span><span class="sprint">sprint 4</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/compare/{ride_id}</span><span class="sprint">sprint 5</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rewards/me</span><span class="sprint">sprint 5</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/me</span><span class="sprint">sprint 6</span></div>
+      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/accessories</span><span class="sprint">sprint 6</span></div>
+      <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/pet/accessories/buy</span><span class="sprint">sprint 6</span></div>
+      <div class="row"><span class="verb v-put">put</span><span class="ppath">/api/v1/pet/accessories/{id}/equip</span><span class="sprint">sprint 6</span></div>
+    </div>
+    <div class="note"><strong>The route cache is further along than this list suggests.</strong>
+      <code>route_service</code>, <code>route_transform</code>, <code>route_repository</code> and
+      the Google Maps client are written and tested, but nothing exposes them over HTTP yet. They
+      reach the frontend through <code>GET /rides/{ride_id}</code> when that lands.</div>
+  </section>
+
+  <footer>
+    <p>Read off the live route table on 29 August 2026, at the end of Sprint 3 section 2. If this
+      file and the running app disagree, the app is right: check <code>app/api/router.py</code>
+      and the route modules under <code>app/api/routes/</code>. Field shapes come from
+      <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>
+  </footer>
+
+</div>
+</body>
+</html>

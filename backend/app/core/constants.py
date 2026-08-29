@@ -1,4 +1,5 @@
 from app.schemas.enums import FuelType, PetStage, TransitMode
+from datetime import timedelta
 
 # REQ-001: sign-up is restricted to Monash accounts.
 MONASH_EMAIL_DOMAINS = ("@student.monash.edu", "@monash.edu")
@@ -49,3 +50,5 @@ PET_STAGE_THRESHOLDS: tuple[tuple[float, PetStage], ...] = (
     (15.0, "hatched"),
     (0.0, "egg"),
 )
+
+TRANSIT_CACHE_TTL = timedelta(hours=2)

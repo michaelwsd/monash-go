@@ -5,6 +5,14 @@
 **Builds toward:** REQ-002 (driver posts a ride), REQ-007 (campus route display, backend half)
 **Depends on:** Sprint 2's vehicles (a ride needs a registered vehicle)
 
+> **Design change, 29/08/26 — the route cache is read-through, not pre-seeded.**
+> As originally written, this sprint pre-seeded all 40 rows with a script and had `route_service`
+> read the cache only, never calling the API. That contradicts `proposal.md` §4.4 ("Before each
+> lookup, the backend checks whether a valid cache entry exists; if so, it returns the cached
+> result without calling the API") and leaves `CLAUDE.md`'s transit TTL unable to ever fire,
+> because nothing would refresh it. The cache is now populated lazily: a route is fetched on first
+> query and refetched when stale. Sections 1–2 and the definition of done are rewritten below.
+
 ## Goal
 
 The core marketplace: drivers post ride offers, passengers can search them. This is also where
@@ -13,11 +21,11 @@ real distances enter the system for the first time — every emissions and cost 
 
 ## Test-driven build order
 
-### 1. Route transform logic — test this before writing the seeding script
+### 1. Route transform logic — test this before anything calls the API
 
-The seeding script itself calls a real, paid, external API, so it cannot be the thing your tests
-exercise. Isolate the part that's actually risky to get wrong: turning a Google Maps Routes API
-response into the `campus_routes` row shape.
+Every path to a route runs through a paid external call, so that call cannot be the thing your
+tests exercise. Isolate the part that is actually risky to get wrong: turning a Google Maps Routes
+API response into the `campus_routes` row shape.
 
 **Write first**, in `tests/unit/test_route_transform.py`, against a **recorded fixture** — call the
 Routes API once by hand, save the JSON response as a test fixture, and never call the live API from
@@ -31,20 +39,62 @@ a test again:
   per `CLAUDE.md`'s `campus_routes` schema note).
 
 **Then implement:**
-- The transform function (e.g. `scripts/_route_transform.py`, imported by both the script and its
-  test — don't duplicate this logic between test fixtures and the real script).
-- `scripts/seed_campus_routes.py` — calls the Routes API for all 20 ordered campus pairs × 2 travel
-  modes (**40 rows**, not 20 — see `changes.md` §5; seed with `itertools.permutations`, not
-  `combinations`, since Clayton→City and City→Clayton are different rows).
+- `app/schemas/route.py` — `CampusRoute` and a Pydantic `TransitLeg`. Note the name clash with
+  `core/emissions.TransitLeg`, which is a `NamedTuple` so that `core/` stays free of Pydantic. Keep
+  both and convert at the boundary; import one under an alias where they meet.
+- `app/services/route_transform.py` — the pure transform, response dict → `CampusRoute`. It lives
+  under `app/` and not `scripts/`, because the running application now needs it: a lazy cache miss
+  transforms a live response on a request path.
+- `app/clients/maps.py` — the `computeRoutes` call itself, returning the raw response dict. A new
+  layer, sibling to `db/client.py`, because a service must not speak HTTP (`CLAUDE.md`, Backend
+  Architecture). Campus addresses and the departure-time rule live here.
+- `scripts/warm_route_cache.py` — optional. `--save-fixtures` records responses for the transform
+  tests; `--drive-only` pre-fetches the 20 drive pairs so ride creation can never block on Google.
+  Not a prerequisite for anything, and no longer seeds all 40 rows.
 
-### 2. Route service — proves the cache is actually being used
+### 2. Route service — the read-through cache
 
-**Write first**, in `tests/unit/test_route_service.py`, with a fake repository:
-- `route_service` reads `campus_routes` and never calls the Google Maps client — assert the mock
-  Maps client's `.call()` (or equivalent) is never invoked during a normal read.
+The flow: query a route → return it if cached and fresh → otherwise fetch, write back, return.
+
+Freshness is not uniform. A drive row **never expires**: the road distance between two campuses
+does not change, and refetching it forever buys nothing (`CLAUDE.md`, "drive: permanent"). A
+transit row expires after `TRANSIT_CACHE_TTL`, defined once in `core/constants.py` with its
+reasoning — and whichever value is chosen, `CLAUDE.md` line 248 must be made to agree with it.
+
+**Write first**, in `tests/unit/test_route_service.py`, with a fake repository and a Maps client
+that raises on any attribute access:
+- a fresh transit row is returned and the client is never called
+- a drive row is never considered expired, however old its `cached_at`
+- an expired transit row triggers a fetch, and the fetched row is written back
+- a missing row triggers a fetch and a write
+- a fetch that raises, with a stale row present, returns the stale row rather than failing
+- a fetch that raises with no row at all raises `NotFoundError`
+- the row written back carries a fresh `cached_at`
 
 **Then implement:**
-- `app/services/route_service.py` — reads the cache only, no live API calls from a request path.
+- `app/repositories/route_repository.py` — `get()` and `upsert()` on `campus_routes`. Upsert on the
+  existing `UNIQUE (origin, destination, travel_mode)` constraint, and set `cached_at` explicitly
+  rather than relying on the column default, or a refresh will not move it.
+- `app/services/route_service.py` — the cache logic above, orchestrating repository, client and
+  transform.
+
+Serving stale on a failed fetch is deliberate: with a live call on the request path, a Maps outage
+or a quota trip would otherwise take `POST /rides` and the Sprint 5 dashboard down entirely.
+
+Two concurrent misses on the same pair will make two calls and two upserts. The unique constraint
+makes that safe, only mildly wasteful, and it is not worth locking for at this scale — but say so
+in a comment so nobody later mistakes it for a bug.
+
+**Open decision — what `departureTime` a lazy transit fetch asks for.** A transit route is only
+meaningful for a specific departure time, and one row per `(origin, destination, transit)` cannot
+hold both an 8am and an 11pm journey. Fetching with *now* means the row holds whatever time the
+last cache miss happened at, so two students comparing the same ride hours apart see different
+figures — the same non-reproducibility `sprint-5.md` guards against for fuel prices. Options:
+(a) add a departure-hour bucket to the cache key and fetch the ride's actual time, correct but
+needs a migration; (b) always fetch a canonical next-weekday-08:00 journey, one row per pair,
+predictably wrong for off-peak rather than unpredictably wrong; (c) fetch with *now*. **(b) is
+recommended for this sprint**, with (a) recorded as the honest upgrade for Sprint 5. Under (b) the
+TTL is only picking up timetable revisions, so it can be far longer than an hour.
 
 ### 3. Ride creation and search
 
@@ -60,7 +110,23 @@ a test again:
 
 **Then implement:**
 - `app/schemas/ride.py`, `app/repositories/ride_repository.py`, `app/services/ride_service.py`.
-- `app/api/v1/rides.py` — `POST /rides`, `GET /rides/search`, `GET /rides/{ride_id}`.
+- `app/api/routes/rides.py` — `POST /rides`, `GET /rides/search`, `GET /rides/{ride_id}`, registered
+  in `app/api/router.py`. (The directory is `api/routes/`, not `api/v1/`; the `/api/v1` prefix is
+  set on the router.)
+
+Two rules the original draft left unstated:
+
+- **`rides.distance_km` comes from the cached drive route, never from the request body.** It is
+  `NOT NULL`, and every emissions and cost figure downstream is `distance_km × something`, so a
+  driver who can set their own distance can set their own green points.
+- **`GET /rides/search` builds its date window in Melbourne time.** `departure_at` is
+  `TIMESTAMPTZ` and the `date` query parameter is a local calendar date; construct the window with
+  `ZoneInfo("Australia/Melbourne")` and convert, or a 9am ride falls under the previous day for
+  half the year.
+
+`test_ride_bulk.py` needs a real database — 100 rows in an in-memory dict proves nothing about
+Postgres. Mark it and exclude it from the default run, or CI needs Supabase credentials. Decide
+which before writing it.
 
 ### 4. Route display (REQ-007, backend half)
 
@@ -77,8 +143,11 @@ row when building the ride detail response.
 ## Definition of done
 
 - [ ] `test_route_transform.py` passes against the recorded fixture
-- [ ] `scripts/seed_campus_routes.py` run once against the real API produces 40 `campus_routes` rows
-- [ ] `test_route_service.py` proves no live API call happens from a request path
+- [ ] `test_route_service.py` proves the cache contract: a hit makes no API call, an expired transit
+      row triggers a refetch and a write-back, a drive row never expires, and a failed fetch serves
+      a stale row rather than raising
+- [ ] A route absent from `campus_routes` is fetched, cached and returned on first query, and the
+      second query for the same route makes no API call
 - [ ] `test_ride_service.py`, `test_rides_endpoint.py`, and the 100-ride bulk test all pass
 - [ ] `GET /ride/{id}` exposes route summary/legs for the frontend to render
 - [ ] REQ-002 acceptance criteria fully met

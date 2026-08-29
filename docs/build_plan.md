@@ -92,7 +92,9 @@ week than the last.
 
 **Notes.**
 - Upsert users on `clerk_id`, never insert blindly. Create the `rewards` row on first sign-in only.
-- Seed `is_concession` from the email domain: `@student.monash.edu` → true.
+- ~~Seed `is_concession` from the email domain: `@student.monash.edu` → true.~~ **Superseded:**
+  `is_concession` defaults to false and is set from the profile form. Student status is not
+  concession eligibility — a concession myki needs a separately approved card.
 - Bound manual vehicle entry: 0 < L/100km ≤ 30, 0 < kWh/100km ≤ 45. Points depend on this value, so
   an unbounded figure is a gaming vector.
 - Two distinct CO2 calculations. The dashboard uses the driver's actual car; rewards use the
@@ -111,18 +113,23 @@ week than the last.
 **Goal.** The core marketplace: drivers post trips, passengers find them. Also where real distances
 enter the system, since every emissions number downstream is `distance × something`.
 
-**Why the cache comes first.** Ride creation needs `distance_km`, and calling Google Maps per
-request would be slow, costly, and pointless for 20 fixed campus pairs. Seed all 40 rows once, then
-every read is a local lookup.
+**Why the cache comes first.** Ride creation needs `distance_km`, and calling Google Maps on every
+request would be slow, costly, and pointless for 20 fixed campus pairs. The cache is read-through
+(`proposal.md` §4.4): a route is fetched on first query and written to `campus_routes`, and every
+read after that is a local lookup. Drive rows never expire — a road distance does not change —
+while transit rows carry a TTL so timetable changes are eventually picked up.
 
 **Why routes are directional.** Clayton→City and City→Clayton have different transit timetables,
 interchanges, and drive durations. 20 ordered pairs × 2 modes = 40 rows, not 20.
 
 **Notes.**
-- Seed with `itertools.permutations`, not `combinations`.
+- 40 rows, not 20: enumerate with `itertools.permutations`, not `combinations`.
+- The paid call belongs in `app/clients/maps.py`, not in a service — services do not speak HTTP.
+- A failed fetch with a stale row cached serves the stale row; only a failure with nothing cached
+  is an error.
 - Transit rows must populate `legs`; transit emissions are uncomputable without it.
 - Search filters route + date + `available_seats > 0`.
-- **Re-check the pet thresholds once the 40 real distances are seeded.** They were calibrated on an
+- **Re-check the pet thresholds once real distances are cached.** They were calibrated on an
   assumed 18 km typical trip, but Clayton to Caulfield is actually 10.4 km by road. If the real
   distances change the ride-count progression meaningfully, that's a Sprint 2 constants fix, raised
   and agreed by the team — not a silent patch mid-sprint.

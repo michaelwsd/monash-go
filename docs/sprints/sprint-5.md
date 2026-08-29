@@ -19,8 +19,10 @@ stubbed out earlier and filled in later.
 
 **Write first**, in `tests/unit/test_fuel_service.py`:
 - The compare service reads the most recent cached `fuel_prices` row per `fuel_type` and never
-  calls the Servo Saver API directly — same pattern as Sprint 3's route cache test, assert the API
-  client mock is never invoked from the read path.
+  calls the Servo Saver API directly — assert the API client mock is never invoked from the read
+  path. Note this is **not** the same pattern as Sprint 3's route cache: fuel prices are written by
+  a scheduled daily job and only ever read on a request path, whereas a route is fetched lazily on
+  a cache miss. Do not copy Sprint 3's service and expect this assertion to hold.
 - A price fetched today and a price fetched tomorrow don't retroactively change a comparison
   computed earlier in the same session — this matters because Servo Saver is rate-limited and a
   price that moved mid-session would make two identical comparisons disagree, which is confusing
@@ -63,7 +65,7 @@ hand-verified — don't invent new fixtures here, cross-check against the same s
   exception layer), not an unhandled error.
 
 **Then implement:**
-- `app/api/v1/compare.py` — `GET /compare/{ride_id}`.
+- `app/api/routes/compare.py` — `GET /compare/{ride_id}`.
 
 ## Definition of done
 

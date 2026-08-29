@@ -13,6 +13,13 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
+export type Campus =
+  | "clayton"
+  | "caulfield"
+  | "peninsula"
+  | "parkville"
+  | "city";
+export type UserRole = "passenger" | "driver" | "both";
 
 /** backend/app/schemas/vehicle.py :: VehicleReference */
 export interface VehicleReference {
@@ -114,4 +121,82 @@ export function searchVehicleReference(
 /** The unit `avg_consumption` and `fuel_consumption` are quoted in. */
 export function consumptionUnit(fuelType: FuelType | ""): string {
   return fuelType === "electric" ? "kWh/100km" : "L/100km";
+}
+
+/** backend/app/schemas/user.py :: UserResponse. clerk_id is deliberately absent. */
+export interface User {
+  id: string;
+  email: string;
+  phone: string;
+  full_name: string;
+  role: UserRole;
+  is_concession: boolean;
+  /** null until onboarding finishes - this is what marks a profile complete. */
+  home_campus: Campus | null;
+  green_points: number;
+  joined_at: string;
+}
+
+/** backend/app/schemas/vehicle.py :: VehicleResponse */
+export interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  fuel_type: FuelType;
+  fuel_consumption: number;
+  created_at: string;
+}
+
+/**
+ * POST /users/sync - idempotent. Creates the users row and its rewards row on
+ * the first call and returns the existing one after that, so it is safe to call
+ * on every page load, which is exactly what the frontend does.
+ */
+export function syncUser(options: ApiOptions): Promise<User> {
+  return apiFetch<User>("/users/sync", { ...options, method: "POST" });
+}
+
+/** PATCH /users/me - partial. Only the keys present are written. */
+export interface UserUpdate {
+  phone?: string;
+  is_concession?: boolean;
+  home_campus?: Campus;
+}
+
+export function updateProfile(
+  changes: UserUpdate,
+  options: ApiOptions,
+): Promise<User> {
+  return apiFetch<User>("/users/me", {
+    ...options,
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+/**
+ * POST /vehicles. Every field is required even when `reference_id` is set - the
+ * backend uses the reference row's values and ignores the rest, but the body
+ * still has to validate. Registering a vehicle also promotes the owner from
+ * 'passenger' to 'driver'.
+ */
+export interface VehicleCreate {
+  make: string;
+  model: string;
+  year: number;
+  fuel_type: FuelType;
+  fuel_consumption: number;
+  reference_id?: number | null;
+}
+
+export function createVehicle(
+  payload: VehicleCreate,
+  options: ApiOptions,
+): Promise<Vehicle> {
+  return apiFetch<Vehicle>("/vehicles", {
+    ...options,
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

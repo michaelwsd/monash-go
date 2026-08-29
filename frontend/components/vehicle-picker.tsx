@@ -51,17 +51,22 @@ export const EMPTY_CAR: CarDetails = {
 };
 
 /**
- * Enough to move on. Consumption is deliberately not required: the reference
- * data is Canadian, so MG, GWM, BYD, LDV, Chery, Haval and most utes are
- * missing from it - roughly 12% of the 2025 Australian market - and a driver
- * whose car is absent must still get through onboarding. We fall back to the
- * fleet average until they fill it in.
+ * Enough to register with POST /vehicles, which requires every one of these -
+ * VehicleCreate validates the whole body even when reference_id is set.
+ *
+ * Picking a row from the dataset fills all five at once, so this only ever
+ * bites on a manual entry. That path has to stay open: the reference data is
+ * Canadian, so MG, GWM, BYD, LDV, Chery, Haval and most utes are missing from
+ * it - roughly 12% of the 2025 Australian market - and a driver whose car is
+ * absent must still be able to register it by typing.
  */
 export function isCarUsable(car: CarDetails): boolean {
   return (
     car.make.trim().length > 0 &&
     car.model.trim().length > 0 &&
-    car.fuelType !== ""
+    searchableYear(car.year) !== undefined &&
+    car.fuelType !== "" &&
+    Number(car.fuelConsumption) > 0
   );
 }
 
@@ -124,8 +129,8 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
     <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
 
       {/* Make and model are separate columns in the reference table, so they
-          are separate fields here. Year is optional: it narrows the search, and
-          it is the one field a manual entry still needs.
+          are separate fields here. Year does two jobs: it narrows the search,
+          and POST /vehicles requires it.
 
           `relative` anchors the results panel below. It floats rather than
           sitting in the flow: twenty rows inline would triple the height of the
@@ -159,7 +164,6 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
           />
           <TextField
             label="Year"
-            hint="optional"
             placeholder="2020"
             inputMode="numeric"
             maxLength={4}
@@ -251,8 +255,8 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
           className="flex items-start gap-2 px-1 text-xs text-gray-500"
         >
           <Search className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Not in our database - fill in the fuel type below and we&rsquo;ll use
-          that instead.
+          Not in our database - fill in the year, fuel type and consumption
+          yourself and we&rsquo;ll use those instead.
         </p>
       )}
 
@@ -272,7 +276,7 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
         <TextField
           label="Consumption"
           suffix={consumptionUnit(value.fuelType)}
-          hint={selected ? "from our data" : "optional"}
+          hint={selected ? "from our data" : undefined}
           placeholder={value.fuelType === "electric" ? "16.5" : "7.1"}
           inputMode="decimal"
           autoComplete="off"

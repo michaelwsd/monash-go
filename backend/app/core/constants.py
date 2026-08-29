@@ -1,5 +1,6 @@
-from app.schemas.enums import FuelType, PetStage, TransitMode
 from datetime import timedelta
+
+from app.schemas.enums import FuelType, PetStage, TransitMode
 
 # REQ-001: sign-up is restricted to Monash accounts.
 MONASH_EMAIL_DOMAINS = ("@student.monash.edu", "@monash.edu")

@@ -48,6 +48,7 @@ class InvalidInputError(DomainError):
 
     status_code = 400
 
+
 class UpstreamServiceError(DomainError):
     """an external API we depend on failed, timed out, or refused us"""
 

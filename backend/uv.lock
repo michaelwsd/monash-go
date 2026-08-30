@@ -690,6 +690,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
+    { name = "pandas" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyjwt", extra = ["crypto"] },
@@ -714,6 +716,8 @@ seed = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.136.3" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pandas", specifier = ">=3.0.3" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.13.0" },

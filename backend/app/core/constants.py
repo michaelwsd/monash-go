@@ -52,4 +52,14 @@ PET_STAGE_THRESHOLDS: tuple[tuple[float, PetStage], ...] = (
     (0.0, "egg"),
 )
 
-TRANSIT_CACHE_TTL = timedelta(hours=2)
+# How long a cached transit row stays fresh. A drive row never expires: road
+# distance between two campuses does not change.
+#
+# One day, because that is when the answer can actually change. Every transit
+# fetch asks for the same canonical journey, the next weekday at 08:00
+# Melbourne (app/clients/maps.py), so two misses on the same day request an
+# identical journey and a shorter TTL would buy nothing but repeated paid calls
+# returning the same figures. Once the date rolls over the request is for a new
+# day, which is the only thing that can surface a timetable revision or a
+# changed service.
+TRANSIT_CACHE_TTL = timedelta(days=1)

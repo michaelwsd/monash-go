@@ -138,18 +138,34 @@ Two rules the original draft left unstated:
   `ZoneInfo("Australia/Melbourne")` and convert, or a 9am ride falls under the previous day for
   half the year.
 
-`test_ride_bulk.py` needs a real database — 100 rows in an in-memory dict proves nothing about
-Postgres. Mark it and exclude it from the default run, or CI needs Supabase credentials. Decide
-which before writing it.
+**Decision, 29/08/26 - warm the drive cache before writing `POST /rides`.** Taking `distance_km`
+from the route cache makes ride creation depend on Google being reachable, and `route_service`'s
+stale-serve fallback cannot help on a cold cache: with no row at all it raises `NotFoundError`, so
+a driver simply cannot post. Write `scripts/warm_route_cache.py --drive-only` first and run it
+once. Twenty rows, cached permanently, and the dependency stops being real in practice. The script
+is now a prerequisite of section 3 rather than the optional extra section 1 called it.
+
+**Decision, 29/08/26 - the bulk test is marked and excluded from the default run.**
+`test_ride_bulk.py` needs a real database; 100 rows in an in-memory dict proves nothing about
+Postgres. Mark it `@pytest.mark.db`, register the marker in `pyproject.toml`, and add
+`-m "not db"` to the default pytest options. CI then stays credential-free and the acceptance
+criterion is still checkable on demand with `uv run pytest -m db`.
 
 ### 4. Route display (REQ-007, backend half)
 
 REQ-007 is mostly a frontend concern (rendering the route on screen), but the backend must expose
 what the frontend needs to draw it.
 
+**Decision, 29/08/26 - ride detail describes the drive, and only the drive.** A ride is somebody
+driving their car, so its route is the `drive` row, and drive rows carry no legs by design. Ride
+detail therefore returns `distance_km` and the drive `route_summary`, and says nothing about
+public transport. The transit alternative belongs to `GET /compare/{ride_id}` in Sprint 5, where
+it arrives with the cost and emissions figures that make the comparison worth showing; splitting
+it across two endpoints would return transit data in two different shapes.
+
 **Write first**, in `tests/integration/test_rides_endpoint.py` (extend the existing suite):
-- `GET /rides/{ride_id}` response includes `route_summary` and, for transit rides, `legs`, sourced
-  from the cached `campus_routes` row for that origin/destination/mode.
+- `GET /rides/{ride_id}` response includes `distance_km` and `route_summary`, sourced from the
+  cached `campus_routes` drive row for that origin and destination.
 
 **Then implement:** wire `ride_service`/`ride_repository` to join in the relevant `campus_routes`
 row when building the ride detail response.
@@ -163,18 +179,23 @@ row when building the ride detail response.
 - [ ] A route absent from `campus_routes` is fetched, cached and returned on first query, and the
       second query for the same route makes no API call
 - [ ] `test_ride_service.py`, `test_rides_endpoint.py`, and the 100-ride bulk test all pass
-- [ ] `GET /ride/{id}` exposes route summary/legs for the frontend to render
+- [ ] `GET /rides/{id}` exposes the drive route summary and distance for the frontend to render
 - [ ] REQ-002 acceptance criteria fully met
 - [ ] REQ-007's backend-facing acceptance criteria met (planned-route data available; no GPS)
 
 ## A note carried over from `build_plan.md`
 
 **Re-check the pet stage thresholds once real distances are seeded.** They were calibrated on an
-assumed 18 km typical trip, but Clayton–Caulfield is actually 10.4 km by road. Once this sprint's
-seeding script runs against the live API, re-run Sprint 2's points tests with the *real* campus
-distances and confirm the 3/9/28/111-ride progression from `changes.md` §2 still holds. If it
-doesn't, that's a Sprint 2 constants change, not a Sprint 3 one — flag it, don't quietly patch it
-here.
+assumed 18 km typical trip. Once the drive cache is warmed, re-run Sprint 2's points tests with the
+*real* campus distances and confirm the 3/9/28/111-ride progression from `changes.md` §2 still
+holds. If it doesn't, that's a Sprint 2 constants change, not a Sprint 3 one - flag it, don't
+quietly patch it here.
+
+Corrected 29/08/26: this note previously said Clayton-Caulfield is 10.4 km by road. The live
+Routes API returns **23.24 km** (Wellington Rd and the M1), recorded in
+`tests/fixtures/routes/clayton_caulfield_drive.json`. Real distances are therefore longer than the
+18 km the thresholds assume, not shorter, so the recalibration moves in the opposite direction from
+what this note implied.
 
 ## Explicitly not in this sprint
 

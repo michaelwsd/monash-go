@@ -51,3 +51,7 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Marked tests need real Supabase credentials, so they are out of the default
+# run and out of CI. Run them deliberately: uv run pytest -m db
+markers = ["db: needs a live Supabase connection"]
+addopts = "-m 'not db'"

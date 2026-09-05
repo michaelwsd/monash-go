@@ -41,3 +41,8 @@ def list_by_owner(db: Client, *, owner_id: UUID) -> list[Vehicle]:
         .execute()
     )
     return [Vehicle.model_validate(row) for row in res.data]
+
+
+def get_by_id(db: Client, vehicle_id: UUID) -> Vehicle | None:
+    res = db.table(TABLE).select("*").eq("id", str(vehicle_id)).limit(1).execute()
+    return Vehicle.model_validate(res.data[0]) if res.data else None

@@ -172,11 +172,16 @@ row when building the ride detail response.
 
 ## Definition of done
 
-- [ ] `test_route_transform.py` passes against the recorded fixture
-- [ ] `test_route_service.py` proves the cache contract: a hit makes no API call, an expired transit
+Sections 1 and 2 are complete (transform, cache, repository, service), and the drive cache is
+seeded via `scripts/warm_route_cache.py`. `POST /rides` landed 05/09/26: schema, repository,
+service and route, with `test_ride_service.py` green at seven tests. Search, ride detail and the
+bulk test are what remain.
+
+- [x] `test_route_transform.py` passes against the recorded fixture
+- [x] `test_route_service.py` proves the cache contract: a hit makes no API call, an expired transit
       row triggers a refetch and a write-back, a drive row never expires, and a failed fetch serves
       a stale row rather than raising
-- [ ] A route absent from `campus_routes` is fetched, cached and returned on first query, and the
+- [x] A route absent from `campus_routes` is fetched, cached and returned on first query, and the
       second query for the same route makes no API call
 - [ ] `test_ride_service.py`, `test_rides_endpoint.py`, and the 100-ride bulk test all pass
 - [ ] `GET /rides/{id}` exposes the drive route summary and distance for the frontend to render

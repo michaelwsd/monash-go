@@ -328,12 +328,12 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Seven are callable; the twelve at the bottom are
+      running route table rather than the plan. Eight are callable; the eleven at the bottom are
       specified but not built, and calling one returns a 404 from the router, not from your code.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>7 live endpoints</span>
-      <span>generated 29 Aug 2026</span>
+      <span>8 live endpoints</span>
+      <span>generated 5 Sep 2026</span>
     </div>
   </header>
 
@@ -369,7 +369,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The seven</div>
+    <div class="eyebrow">The eight</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -379,6 +379,7 @@ Content-Type: application/json</pre>
       <a href="#vehicles-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/me</span><span class="iwhat">the caller's registered cars</span></a>
       <a href="#reference"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference</span><span class="iwhat">look up fuel consumption by make and model</span></a>
       <a href="#similar"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference/similar</span><span class="iwhat">near matches when the exact car is absent</span></a>
+      <a href="#rides-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/rides</span><span class="iwhat">post a ride offer between two campuses</span></a>
     </nav>
   </section>
 
@@ -719,6 +720,84 @@ Authorization: Bearer &lt;clerk_jwt&gt;
     </article>
   </section>
 
+
+  <section id="rides">
+    <div class="eyebrow">Rides</div>
+    <h2>Posting a ride</h2>
+
+    <article class="endpoint" id="rides-create">
+      <div class="ep-head">
+        <span class="verb v-post">post</span>
+        <span class="ep-path">/api/v1/rides</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Creates a ride offer. The driver is whoever the token says, and the vehicle must be one
+          they own. A new ride opens with every seat free and <code>status: "open"</code>.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request body</div>
+<pre>{
+  <span class="k">"vehicle_id"</span>: "9a2e…",
+  <span class="k">"origin"</span>: "clayton",
+  <span class="k">"destination"</span>: "caulfield",
+  <span class="k">"departure_at"</span>: "2026-09-10T09:00:00+10:00",
+  <span class="k">"total_seats"</span>: 3
+}</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">201</div>
+<pre>{
+  <span class="k">"id"</span>: "7c04…",
+  <span class="k">"driver_id"</span>: "3f1c…",
+  <span class="k">"vehicle_id"</span>: "9a2e…",
+  <span class="k">"origin"</span>: "clayton",
+  <span class="k">"destination"</span>: "caulfield",
+  <span class="k">"departure_at"</span>: "2026-09-09T23:00:00Z",
+  <span class="k">"total_seats"</span>: 3,
+  <span class="k">"available_seats"</span>: 3,
+  <span class="k">"distance_km"</span>: 23.24,
+  <span class="k">"status"</span>: "open",
+  <span class="k">"created_at"</span>: "2026-09-05T02:14:08Z"
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Rules</th></tr></thead>
+            <tbody>
+              <tr><td class="name">vehicle_id <span class="req">req</span></td><td>uuid</td><td>Must belong to the caller</td></tr>
+              <tr><td class="name">origin <span class="req">req</span></td><td>campus</td><td>Must differ from the destination</td></tr>
+              <tr><td class="name">destination <span class="req">req</span></td><td>campus</td><td>Must differ from the origin</td></tr>
+              <tr><td class="name">departure_at <span class="req">req</span></td><td>datetime</td><td>Must carry a timezone offset, and must be in the future</td></tr>
+              <tr><td class="name">total_seats <span class="req">req</span></td><td>integer</td><td>1 to 7. Seats for passengers, the driver not counted</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">400</td><td>The departure has already passed</td></tr>
+              <tr><td class="num">403</td><td>The vehicle belongs to someone else</td></tr>
+              <tr><td class="num">404</td><td>No such vehicle, no user row for this token, or no cached drive route for that pair</td></tr>
+              <tr><td class="num">422</td><td>Same origin and destination, a naive <code>departure_at</code>, seats outside 1 to 7, or an unknown campus</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong><code>distance_km</code> is not yours to send.</strong> It is
+          absent from the request body on purpose and comes from the cached drive route for that
+          campus pair. Every emissions and points figure downstream multiplies it, so a driver who
+          could set their own distance could set their own green points.</div>
+        <div class="note"><strong>Send a timezone offset.</strong>
+          <code>"2026-09-10T09:00"</code> is refused with a 422:
+          <code>departure_at</code> is stored as <code>TIMESTAMPTZ</code>, and a wall-clock time
+          with no zone does not name a moment. Send
+          <code>"2026-09-10T09:00:00+10:00"</code>; the response comes back in UTC.</div>
+      </div>
+    </article>
+  </section>
+
   <section id="errors">
     <div class="eyebrow">Errors</div>
     <h2>Status codes</h2>
@@ -760,8 +839,16 @@ Authorization: Bearer &lt;clerk_jwt&gt;
         </tbody>
       </table>
     </div>
-    <p class="measure"><code>ride_status</code>, <code>booking_status</code> and
-      <code>accessory_category</code> exist in the database but no endpoint returns them yet.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Enum</th><th>Values</th></tr></thead>
+        <tbody>
+          <tr><td class="name">ride_status</td><td><code>open</code> <code>full</code> <code>in_progress</code> <code>completed</code> <code>cancelled</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure"><code>booking_status</code> and <code>accessory_category</code> exist in the
+      database but no endpoint returns them yet.</p>
   </section>
 
   <section id="planned">
@@ -771,7 +858,6 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       on the router. A request to any of them gets a 404 from FastAPI before reaching any of your
       code, so do not build against them yet.</p>
     <div class="planned">
-      <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/rides</span><span class="sprint">sprint 3</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rides/search</span><span class="sprint">sprint 3</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rides/{ride_id}</span><span class="sprint">sprint 3</span></div>
       <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/bookings</span><span class="sprint">sprint 4</span></div>
@@ -784,14 +870,14 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/pet/accessories/buy</span><span class="sprint">sprint 6</span></div>
       <div class="row"><span class="verb v-put">put</span><span class="ppath">/api/v1/pet/accessories/{id}/equip</span><span class="sprint">sprint 6</span></div>
     </div>
-    <div class="note"><strong>The route cache is further along than this list suggests.</strong>
-      <code>route_service</code>, <code>route_transform</code>, <code>route_repository</code> and
-      the Google Maps client are written and tested, but nothing exposes them over HTTP yet. They
-      reach the frontend through <code>GET /rides/{ride_id}</code> when that lands.</div>
+    <div class="note"><strong>The route cache is already load-bearing.</strong> The twenty drive
+      routes are seeded, and <code>POST /rides</code> reads its <code>distance_km</code> from them.
+      The transit half is fetched lazily and has no consumer until
+      <code>GET /compare/{ride_id}</code>.</div>
   </section>
 
   <footer>
-    <p>Read off the live route table on 29 August 2026, at the end of Sprint 3 section 2. If this
+    <p>Read off the live route table on 5 September 2026, with Sprint 3's ride creation landed. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

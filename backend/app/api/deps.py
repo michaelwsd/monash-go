@@ -15,9 +15,11 @@ through app.dependency_overrides.
 
 from typing import Annotated
 
+import httpx
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.clients.maps import get_maps_client
 from app.core.config import Settings, get_settings
 from app.core.security import ClerkClaims, verify_clerk_token
 from app.db.client import get_supabase
@@ -56,3 +58,5 @@ def get_current_user_clerk_id(
 CurrentUser = Annotated[str, Depends(get_current_user_clerk_id)]
 
 CurrentClaims = Annotated[ClerkClaims, Depends(get_current_claims)]
+
+MapsDep = Annotated[httpx.Client, Depends(get_maps_client)]

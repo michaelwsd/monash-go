@@ -328,11 +328,11 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Eight are callable; the eleven at the bottom are
+      running route table rather than the plan. Ten are callable; the nine at the bottom are
       specified but not built, and calling one returns a 404 from the router, not from your code.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>8 live endpoints</span>
+      <span>10 live endpoints</span>
       <span>generated 5 Sep 2026</span>
     </div>
   </header>
@@ -369,7 +369,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The eight</div>
+    <div class="eyebrow">The ten</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -380,6 +380,8 @@ Content-Type: application/json</pre>
       <a href="#reference"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference</span><span class="iwhat">look up fuel consumption by make and model</span></a>
       <a href="#similar"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference/similar</span><span class="iwhat">near matches when the exact car is absent</span></a>
       <a href="#rides-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/rides</span><span class="iwhat">post a ride offer between two campuses</span></a>
+      <a href="#rides-search"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/search</span><span class="iwhat">find rides with seats left on a given day</span></a>
+      <a href="#rides-detail"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/{ride_id}</span><span class="iwhat">one ride, with its driver, car and route</span></a>
     </nav>
   </section>
 
@@ -723,7 +725,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
 
   <section id="rides">
     <div class="eyebrow">Rides</div>
-    <h2>Posting a ride</h2>
+    <h2>Posting, finding and opening a ride</h2>
 
     <article class="endpoint" id="rides-create">
       <div class="ep-head">
@@ -796,6 +798,130 @@ Authorization: Bearer &lt;clerk_jwt&gt;
           <code>"2026-09-10T09:00:00+10:00"</code>; the response comes back in UTC.</div>
       </div>
     </article>
+
+    <article class="endpoint" id="rides-search">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/rides/search</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Rides on one route, on one day, that still have a seat free. Ordered by departure
+          time, earliest first. A day with nothing on it is an empty array, not an error.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/rides/search
+      ?origin=clayton
+      &amp;destination=caulfield
+      &amp;on=2026-09-10</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  {
+    <span class="k">"id"</span>: "7c04…",
+    <span class="k">"driver_id"</span>: "3f1c…",
+    <span class="k">"vehicle_id"</span>: "9a2e…",
+    <span class="k">"departure_at"</span>: "2026-09-09T23:00:00Z",
+    <span class="k">"available_seats"</span>: 3,
+    <span class="k">"distance_km"</span>: 23.24,
+    <span class="k">"status"</span>: "open"
+  }
+]</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Query</th><th>Type</th><th>Rules</th></tr></thead>
+            <tbody>
+              <tr><td class="name">origin <span class="req">req</span></td><td>campus</td><td>Must differ from the destination</td></tr>
+              <tr><td class="name">destination <span class="req">req</span></td><td>campus</td><td>Routes are directional; the reverse trip is a different search</td></tr>
+              <tr><td class="name">on <span class="req">req</span></td><td>date</td><td><code>YYYY-MM-DD</code>, read as a Melbourne calendar date</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">400</td><td>Origin and destination are the same campus</td></tr>
+              <tr><td class="num">422</td><td>An unknown campus, a malformed date, or a missing parameter</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong><code>on</code> is a Melbourne date, and the times come back
+          in UTC.</strong> A ride departing 09:00 on 10 September is stored as
+          <code>2026-09-09T23:00:00Z</code> but belongs to the 10th, which is the date a person
+          would type. Format departures in <code>Australia/Melbourne</code> before showing
+          them.</div>
+        <div class="note"><strong>Two filters, not one.</strong> A result needs both
+          <code>available_seats &gt; 0</code> and <code>status: "open"</code>. A cancelled ride
+          still has its seats, so filtering on the count alone would offer rides nobody can
+          book.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="rides-detail">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/rides/{ride_id}</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>One ride, with the ids resolved. Search returns a <code>driver_id</code> and a
+          <code>vehicle_id</code>, which mean nothing to a person; this turns them into a name
+          and a car, and adds the road route. The <code>ride_id</code> comes from a search
+          result, not from anything a user types.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/rides/7c04a1b2-…</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"id"</span>: "7c04…",
+  <span class="k">"origin"</span>: "clayton",
+  <span class="k">"destination"</span>: "caulfield",
+  <span class="k">"departure_at"</span>: "2026-09-09T23:00:00Z",
+  <span class="k">"available_seats"</span>: 3,
+  <span class="k">"distance_km"</span>: 23.24,
+  <span class="k">"status"</span>: "open",
+  <span class="k">"driver"</span>: {
+    <span class="k">"id"</span>: "3f1c…",
+    <span class="k">"full_name"</span>: "Michael Wang"
+  },
+  <span class="k">"vehicle"</span>: {
+    <span class="k">"make"</span>: "Toyota",
+    <span class="k">"model"</span>: "Corolla",
+    <span class="k">"year"</span>: 2020,
+    <span class="k">"fuel_type"</span>: "petrol",
+    <span class="k">"fuel_consumption"</span>: 7.1
+  },
+  <span class="k">"route_summary"</span>: "Wellington Rd and M1"
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">404</td><td>No ride with that id</td></tr>
+              <tr><td class="num">422</td><td>The path segment is not a UUID</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>No phone number, by design.</strong> The
+          <code>driver</code> object carries an id and a name and nothing else. Contact details
+          are revealed once a booking is confirmed, which is Sprint 4's work.</div>
+        <div class="note"><strong><code>route_summary</code> can be null, and that is not an
+          error.</strong> It is the cached driving route for the pair, and this endpoint reads
+          the cache without refilling it: a page view should never trigger a paid Maps call.
+          Render the ride without it. It describes the drive; the public transport comparison
+          arrives with <code>GET /compare/{ride_id}</code>.</div>
+      </div>
+    </article>
   </section>
 
   <section id="errors">
@@ -858,8 +984,6 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       on the router. A request to any of them gets a 404 from FastAPI before reaching any of your
       code, so do not build against them yet.</p>
     <div class="planned">
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rides/search</span><span class="sprint">sprint 3</span></div>
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rides/{ride_id}</span><span class="sprint">sprint 3</span></div>
       <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/bookings</span><span class="sprint">sprint 4</span></div>
       <div class="row"><span class="verb v-delete">del</span><span class="ppath">/api/v1/bookings/{booking_id}</span><span class="sprint">sprint 4</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/bookings/me</span><span class="sprint">sprint 4</span></div>
@@ -877,7 +1001,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
   </section>
 
   <footer>
-    <p>Read off the live route table on 5 September 2026, with Sprint 3's ride creation landed. If this
+    <p>Read off the live route table on 5 September 2026, with Sprint 3's rides endpoints landed. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

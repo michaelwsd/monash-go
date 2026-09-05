@@ -85,6 +85,18 @@ uv run python scripts/prepare_vehicle_reference.py
 uv run python scripts/seed_vehicle_reference.py
 ```
 
+To warm the campus route cache:
+
+```bash
+uv run python -m scripts.warm_route_cache
+```
+
+Twenty driving routes, one per ordered pair of campuses, fetched from the Google Maps
+Routes API and cached permanently. `POST /rides` reads `distance_km` from this table, so
+on an empty cache every ride creation makes a live call and fails outright when Google is
+unreachable. Run it once per database. It prints each distance, which is also how you
+notice a campus address that geocoded to the wrong building.
+
 ---
 
 ## Backend architecture
@@ -111,7 +123,8 @@ backend/
 ├── supabase/migrations/   the schema
 └── tests/
     ├── unit/              services and pure functions, no database
-    └── integration/       routes through a TestClient
+    ├── integration/       routes through a TestClient
+    └── fixtures/          recorded API responses, so no test calls Google
 ```
 
 Four rules that follow from the layering:
@@ -183,8 +196,13 @@ npm run lint
 npm run build                      # catches type errors the dev server tolerates
 ```
 
-The whole suite runs without a database or a network, which is the point. It also means
-the tests cannot catch a mismatch between your Pydantic models and the real columns, so
+The whole suite runs without a database or a network, which is the point. Tests marked
+`db` are excluded by `addopts` and need real Supabase credentials; run them deliberately
+with `uv run pytest -m db`. The 120-ride bulk test lives there, because a hundred rows in
+an in-memory dict proves nothing about Postgres.
+
+Being offline is also the limit: the tests cannot catch a mismatch between your Pydantic
+models and the real columns, so
 make one real request against Supabase before calling a feature done:
 
 ```bash
@@ -193,6 +211,28 @@ curl -i -X POST localhost:8000/api/v1/users/sync -H "Authorization: Bearer $TOKE
 ```
 
 Grab `$TOKEN` from the browser devtools on a signed-in frontend session.
+
+---
+
+## The API
+
+`docs/api-reference.html` documents every endpoint the app actually serves, read off the
+live route table rather than the plan: request and response shapes, field rules, status
+codes, and a list of what is specified but not yet built. Open it in a browser.
+
+Ten endpoints are live as of Sprint 3: user sync and profile, vehicle registration and the
+reference lookup, and the three rides endpoints. Bookings, the comparison dashboard,
+rewards and the pet shop are still ahead.
+
+Three rules that catch people out:
+
+- **`distance_km` is never sent by a client.** It comes from the cached driving route, and
+  `RideCreate` rejects it outright. Every emissions and points figure multiplies it.
+- **`departure_at` needs a timezone offset.** `2026-09-10T09:00:00+10:00`, not
+  `2026-09-10T09:00`. A wall-clock time with no zone does not name a moment, and a naive
+  value is a 422.
+- **Search dates are Melbourne dates, responses are UTC.** A 9am ride on the 10th comes
+  back as `2026-09-09T23:00:00Z`. Format in `Australia/Melbourne` before displaying.
 
 ---
 

@@ -34,3 +34,33 @@ def insert(
 
     res = db.table(TABLE).insert(payload).execute()
     return Ride.model_validate(res.data[0])
+
+
+def search(
+    db: Client,
+    *,
+    origin: Campus,
+    destination: Campus,
+    window_start: datetime,
+    window_end: datetime,
+) -> list[Ride]:
+    res = (
+        db.table(TABLE)
+        .select("*")
+        .eq("origin", origin)
+        .eq("destination", destination)
+        .eq("status", "open")
+        .gt("available_seats", 0)
+        .gte("departure_at", window_start.isoformat())
+        .lt("departure_at", window_end.isoformat())
+        .order("departure_at")
+        .execute()
+    )
+
+    return [Ride.model_validate(row) for row in res.data]
+
+
+def get_ride(db: Client, ride_id: UUID) -> Ride | None:
+    res = db.table(TABLE).select("*").eq("ride_id", str(ride_id)).limit(1).execute()
+
+    return Ride.model_validate(res.data[0]) if res.data else None

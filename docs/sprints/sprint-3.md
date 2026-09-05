@@ -172,10 +172,15 @@ row when building the ride detail response.
 
 ## Definition of done
 
-Sections 1 and 2 are complete (transform, cache, repository, service), and the drive cache is
-seeded via `scripts/warm_route_cache.py`. `POST /rides` landed 05/09/26: schema, repository,
-service and route, with `test_ride_service.py` green at seven tests. Search, ride detail and the
-bulk test are what remain.
+**Sprint complete, 05/09/26.** All four sections built and tested: the route transform and its
+recorded fixtures, the read-through cache, the drive cache seeded by `scripts/warm_route_cache.py`,
+and the three rides endpoints. 162 tests pass in the default run, with five more behind
+`uv run pytest -m db`.
+
+One decision taken while building section 3: the bulk test writes to the real database, so it is
+marked `db` and excluded via `addopts` in `pyproject.toml`. It also creates its own vehicle when
+the database has none, rather than skipping - an acceptance criterion that quietly skips is one
+nobody notices going unchecked.
 
 - [x] `test_route_transform.py` passes against the recorded fixture
 - [x] `test_route_service.py` proves the cache contract: a hit makes no API call, an expired transit
@@ -183,10 +188,10 @@ bulk test are what remain.
       a stale row rather than raising
 - [x] A route absent from `campus_routes` is fetched, cached and returned on first query, and the
       second query for the same route makes no API call
-- [ ] `test_ride_service.py`, `test_rides_endpoint.py`, and the 100-ride bulk test all pass
-- [ ] `GET /rides/{id}` exposes the drive route summary and distance for the frontend to render
-- [ ] REQ-002 acceptance criteria fully met
-- [ ] REQ-007's backend-facing acceptance criteria met (planned-route data available; no GPS)
+- [x] `test_ride_service.py`, `test_rides_endpoint.py`, and the 100-ride bulk test all pass
+- [x] `GET /rides/{id}` exposes the drive route summary and distance for the frontend to render
+- [x] REQ-002 acceptance criteria fully met
+- [x] REQ-007's backend-facing acceptance criteria met (planned-route data available; no GPS)
 
 ## A note carried over from `build_plan.md`
 
@@ -201,6 +206,18 @@ Routes API returns **23.24 km** (Wellington Rd and the M1), recorded in
 `tests/fixtures/routes/clayton_caulfield_drive.json`. Real distances are therefore longer than the
 18 km the thresholds assume, not shorter, so the recalibration moves in the opposite direction from
 what this note implied.
+
+## Carried into Sprint 4
+
+- **Re-check the pet stage thresholds.** See the note above; the drive cache is now seeded, so the
+  real distances exist and the check can be done.
+- **`ride_repository.get_ride` should be `get_by_id`**, matching `vehicle_repository` and
+  `user_repository`. Renaming it inside its own module removes the stutter.
+- **`user_repository.get_by_id` passes a raw `UUID` to `.eq()`** where every other call site does
+  `str(...)`. It works, because the HTTP layer stringifies on the way out, but the inconsistency
+  invites someone to wonder whether the difference is deliberate.
+- **`pandas` is declared twice in `pyproject.toml`**, in the runtime `dependencies` and in the
+  `seed` group whose own comment says it is never imported by the running app.
 
 ## Explicitly not in this sprint
 

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.enums import Campus, RideStatus
+from app.schemas.vehicle import VehicleResponse
 
 
 # a list of things the caller can decide
@@ -61,3 +62,16 @@ class RideResponse(BaseModel):
     distance_km: float
     status: RideStatus
     created_at: datetime
+
+
+class RideDriver(BaseModel):
+    """Just the name. Phone is revealed after a booking is confirmed."""
+
+    id: UUID
+    full_name: str
+
+
+class RideDetail(RideResponse):
+    driver: RideDriver
+    vehicle: VehicleResponse
+    route_summary: str | None

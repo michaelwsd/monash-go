@@ -1,6 +1,7 @@
 """Every users-table query"""
 
 from typing import Any
+from uuid import UUID
 
 from app.schemas.enums import UserRole
 from app.schemas.user import User
@@ -12,6 +13,11 @@ TABLE = "users"
 # get user data
 def get_by_clerk_id(db: Client, clerk_id: str) -> User | None:
     res = db.table(TABLE).select("*").eq("clerk_id", clerk_id).limit(1).execute()
+    return User.model_validate(res.data[0]) if res.data else None
+
+
+def get_by_id(db: Client, user_id: UUID) -> User | None:
+    res = db.table(TABLE).select("*").eq("id", str(user_id)).limit(1).execute()
     return User.model_validate(res.data[0]) if res.data else None
 
 

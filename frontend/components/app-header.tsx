@@ -1,6 +1,8 @@
 "use client";
 
-import { LogOut, Sprout } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Car, LogOut, Sprout, UserRound } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,10 +16,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/* `built` is what decides between a link and inert text. A link to a 404 is
+   worse than no link, so an unbuilt section stays greyed out until its page
+   exists - flip the flag in the same commit that adds the route.
+
+   My cars and Profile are deliberately absent: they are account settings, not
+   sections of the app, so they live in the avatar menu with Sign out. */
 const NAV = [
-  { label: "Find a ride", href: "/rides" },
-  { label: "Post a drive", href: "/rides/new" },
-  { label: "My trips", href: "/trips" },
+  { label: "Find a ride", href: "/rides", built: false },
+  { label: "Post a drive", href: "/rides/new", built: false },
+  { label: "My trips", href: "/trips", built: false },
 ];
 
 /**
@@ -32,6 +40,7 @@ const NAV = [
 export function AppHeader({ greenPoints }: { greenPoints: number }) {
   const { user } = useUser();
   const { signOut } = useClerk();
+  const pathname = usePathname();
 
   const name = user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const initials =
@@ -52,15 +61,32 @@ export function AppHeader({ greenPoints }: { greenPoints: number }) {
           {/* Hidden below sm: at phone width the design uses a bottom tab bar
               (artboard 1d) rather than squeezing these in. */}
           <nav className="hidden items-center gap-[18px] sm:flex">
-            {NAV.map((item) => (
-              <span
-                key={item.href}
-                className="text-xs text-muted-foreground/70"
-                title="Not built yet"
-              >
-                {item.label}
-              </span>
-            ))}
+            {NAV.map((item) =>
+              item.built ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  // aria-current marks the section for a screen reader; the
+                  // weight and colour do the same job for everyone else.
+                  aria-current={pathname === item.href ? "page" : undefined}
+                  className={`rounded text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                    pathname === item.href
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span
+                  key={item.href}
+                  className="text-xs text-muted-foreground/70"
+                  title="Not built yet"
+                >
+                  {item.label}
+                </span>
+              ),
+            )}
           </nav>
         </div>
 
@@ -90,6 +116,20 @@ export function AppHeader({ greenPoints }: { greenPoints: number }) {
                   {user?.primaryEmailAddress?.emailAddress}
                 </span>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {/* The only route to either page, at every width. */}
+              <DropdownMenuItem asChild>
+                <Link href="/profile">
+                  <UserRound aria-hidden />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/vehicles">
+                  <Car aria-hidden />
+                  My cars
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => void signOut({ redirectUrl: "/sign-in" })}

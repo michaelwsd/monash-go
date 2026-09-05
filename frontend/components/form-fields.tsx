@@ -11,9 +11,15 @@ import {
 
 /* One source of truth for field chrome, so an input and a select can never
    drift apart on border, radius, padding or focus ring. Shared by the
-   onboarding form and the vehicle picker. */
+   onboarding form, the vehicle picker and the pages under (app).
+
+   Semantic tokens rather than literal greys: these are the same colours in the
+   light theme, and they are the only reason the fields stay legible if the
+   .dark class in globals.css is ever switched on. A literal bg-white keeps a
+   white input on a near-black card. --eco is emerald-600, so the focus ring is
+   unchanged. */
 export const FIELD =
-  "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600";
+  "w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-eco";
 
 export function FieldLabel({
   label,
@@ -27,8 +33,8 @@ export function FieldLabel({
   return (
     <label className="block">
       <span className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        {hint && <span className="text-xs text-gray-400">{hint}</span>}
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
       </span>
       {children}
     </label>
@@ -59,7 +65,12 @@ export function TextField({
   const input = (
     <input
       {...props}
-      className={cn(FIELD, "placeholder-gray-400", suffix && "pr-20", className)}
+      className={cn(
+        FIELD,
+        "placeholder:text-muted-foreground",
+        suffix && "pr-20",
+        className,
+      )}
     />
   );
 
@@ -68,7 +79,7 @@ export function TextField({
       {suffix ? (
         <span className="relative block">
           {input}
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400">
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
             {suffix}
           </span>
         </span>
@@ -125,7 +136,7 @@ export function SelectField({
             than `h-auto` because the default height is set through a data
             attribute, which outranks a bare utility. */}
         <SelectTrigger
-          className={`${FIELD} w-full justify-between data-[size=default]:h-auto data-placeholder:text-gray-400 focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 disabled:opacity-100`}
+          className={`${FIELD} w-full justify-between data-[size=default]:h-auto data-placeholder:text-muted-foreground focus-visible:border-eco focus-visible:ring-2 focus-visible:ring-eco disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100`}
         >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>

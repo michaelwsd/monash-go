@@ -137,6 +137,23 @@ export interface User {
   joined_at: string;
 }
 
+/**
+ * The five campuses, as the backend's CAMPUS enum spells them alongside what a
+ * person reads. Same value/label split as the fuel types: the wire value is
+ * stored, so nothing has to be translated at request time.
+ */
+export const CAMPUS_OPTIONS: readonly { value: Campus; label: string }[] = [
+  { value: "clayton", label: "Clayton" },
+  { value: "caulfield", label: "Caulfield" },
+  { value: "peninsula", label: "Peninsula" },
+  { value: "parkville", label: "Parkville" },
+  { value: "city", label: "City (Docklands)" },
+];
+
+export function campusLabel(value: Campus | null): string {
+  return CAMPUS_OPTIONS.find((option) => option.value === value)?.label ?? "";
+}
+
 /** backend/app/schemas/vehicle.py :: VehicleResponse */
 export interface Vehicle {
   id: string;
@@ -199,4 +216,14 @@ export function createVehicle(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * GET /vehicles/me - every car the caller owns, newest first.
+ *
+ * An empty array is the ordinary answer for someone who has not registered
+ * one, not an error, so callers render an empty state rather than a failure.
+ */
+export function getMyVehicles(options: ApiOptions): Promise<Vehicle[]> {
+  return apiFetch<Vehicle[]>("/vehicles/me", options);
 }

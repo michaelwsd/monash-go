@@ -6,6 +6,7 @@ import { Check, Loader2, Search } from "lucide-react";
 import { TextField, SelectField, type SelectOption } from "@/components/form-fields";
 import { consumptionUnit, type FuelType, type VehicleReference } from "@/lib/api";
 import { useVehicleSearch } from "@/lib/use-vehicle-search";
+import { cn } from "@/lib/utils";
 
 /* Values are what the backend's FuelType literal expects; labels are what the
    user reads. Storing the value means no translation at request time. */
@@ -78,16 +79,37 @@ function searchableYear(year: string): number | undefined {
     : undefined;
 }
 
-function describe(row: VehicleReference): string {
-  return `${fuelTypeLabel(row.fuel_type)} · ${row.avg_consumption} ${consumptionUnit(row.fuel_type)}`;
+/* Fuel type as a chip rather than another run of grey text: it is the one
+   categorical field in the row, so it is what someone scanning for "the hybrid
+   one" is actually looking for. Hybrid and electric take the eco tint, which
+   is the same signal the rest of the app uses for a low-emissions figure. */
+function FuelChip({ fuelType }: { fuelType: FuelType }) {
+  const low = fuelType === "hybrid" || fuelType === "electric";
+  return (
+    <span
+      className={`rounded px-1.5 py-0.5 text-[10px] font-medium tracking-[0.02em] ${
+        low ? "bg-eco-muted text-eco-foreground" : "bg-muted text-muted-foreground"
+      }`}
+    >
+      {fuelTypeLabel(fuelType)}
+    </span>
+  );
 }
 
 interface VehiclePickerProps {
   value: CarDetails;
   onChange: (car: CarDetails) => void;
+  /** For a caller that caps the height, e.g. `min-h-0` inside a dialog with a
+      max-height. The results list then gives way instead of pushing the fuel
+      fields out of view. */
+  className?: string;
 }
 
-export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
+export default function VehiclePicker({
+  value,
+  onChange,
+  className,
+}: VehiclePickerProps) {
   const selected = value.referenceId !== null;
 
   /* Whether the results panel is showing. Focus opens it, Escape and moving
@@ -126,18 +148,20 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
   const showResults = !selected && value.make.trim().length >= 2;
 
   return (
-    <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+    <div
+      className={cn(
+        "flex min-h-0 flex-col gap-4 rounded-xl border border-border bg-muted/50 p-4",
+        className,
+      )}
+    >
 
       {/* Make and model are separate columns in the reference table, so they
           are separate fields here. Year does two jobs: it narrows the search,
           and POST /vehicles requires it.
 
-          `relative` anchors the results panel below. It floats rather than
-          sitting in the flow: twenty rows inline would triple the height of the
-          card and shove the fuel type fields off the screen every time someone
-          types. Escape closes it, as does moving focus out of this block. */}
+          Escape closes the results, as does moving focus out of this block. */}
       <div
-        className="relative"
+        className="flex min-h-0 flex-col"
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
         }}
@@ -145,7 +169,7 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
           if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
         }}
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_6rem]">
+        <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_6rem]">
           <TextField
             label="Make"
             placeholder="Toyota"
@@ -177,44 +201,77 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
         </div>
 
         {showResults && open && results.length > 0 && (
-          <ul className="absolute inset-x-0 top-full z-20 mt-1.5 max-h-56 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-            {results.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  /* Keeps focus in the input, so the panel does not close on
-                     mousedown before the click lands. Buttons are not focused
-                     by a click on macOS, which is exactly where that bites. */
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => choose(row)}
-                  className="flex w-full items-baseline justify-between gap-3 px-3 py-2.5 text-left hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600"
-                >
-                  <span className="min-w-0 text-sm text-gray-900">
-                    <span className="font-medium">
-                      {row.make} {row.model}
-                    </span>{" "}
-                    <span className="text-gray-500">{row.year}</span>
-                  </span>
-                  <span className="shrink-0 text-xs text-gray-500">
-                    {describe(row)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          /* In the flow, not floating.
+
+             It used to be absolutely positioned, on the reasoning that twenty
+             rows inline would triple the height of the card. Floating turned
+             out worse: Card sets overflow-hidden, so the panel was sliced off
+             at the card's edge, and what survived covered the fuel fields and
+             the Save button underneath it. Capping the height solves the
+             original problem without either. The block appears once at a fixed
+             size and pushes the fields down by that much, rather than jumping
+             on every keystroke.
+
+             min-h-0 and the default flex-shrink, rather than a plain
+             max-height: normally the list is its own height and the container
+             grows around it, but where a caller caps the height this is the
+             only child not marked shrink-0, so it is the one that gives way.
+             The fuel type and consumption fields never get pushed off. */
+          <div className="mt-2 flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-background">
+            {/* Says how many there are and why they are in this order. Without
+                it a sliced-off bottom row is the only clue the list scrolls. */}
+            <p className="shrink-0 border-b border-border bg-muted/50 px-3 py-1.5 text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
+              {results.length} {results.length === 1 ? "match" : "matches"}
+              <span className="normal-case"> &middot; newest first</span>
+            </p>
+
+            {/* A hair over four rows, so the fifth peeks and the list visibly
+                continues. overscroll-contain keeps the page still once it
+                bottoms out. */}
+            <ul className="max-h-[12.5rem] min-h-0 overflow-y-auto overscroll-contain">
+              {results.map((row) => (
+                <li key={row.id} className="border-t border-border/60 first:border-t-0">
+                  <button
+                    type="button"
+                    /* Keeps focus in the input, so the panel does not close on
+                       mousedown before the click lands. Buttons are not focused
+                       by a click on macOS, which is exactly where that bites. */
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => choose(row)}
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted focus:outline-none focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-eco"
+                  >
+                    <span className="min-w-0 truncate text-sm text-foreground">
+                      <span className="font-medium">
+                        {row.make} {row.model}
+                      </span>{" "}
+                      <span className="tabular-nums text-muted-foreground">
+                        {row.year}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <FuelChip fuelType={row.fuel_type} />
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {row.avg_consumption} {consumptionUnit(row.fuel_type)}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 
       {selected && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+        <div className="flex shrink-0 items-center justify-between gap-3 rounded-lg border border-eco-border bg-eco-muted px-3 py-2.5">
           <span className="flex min-w-0 items-center gap-2">
-            <Check className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span className="min-w-0 text-sm text-emerald-900">
+            <Check className="h-4 w-4 shrink-0 text-eco" />
+            <span className="min-w-0 text-sm text-eco-foreground">
               Matched{" "}
               <span className="font-medium">
                 {value.make} {value.model} {value.year}
               </span>
-              <span className="block text-xs text-emerald-700 sm:inline sm:before:content-['_·_']">
+              <span className="block text-xs text-eco-foreground/80 sm:inline sm:before:content-['_·_']">
                 {fuelTypeLabel(value.fuelType)} · {value.fuelConsumption}{" "}
                 {consumptionUnit(value.fuelType)}
               </span>
@@ -223,20 +280,20 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
           <button
             type="button"
             onClick={() => editSearch({})}
-            className="shrink-0 rounded text-xs font-medium text-emerald-800 underline underline-offset-2 hover:text-emerald-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+            className="shrink-0 rounded text-xs font-medium text-eco-foreground underline underline-offset-2 hover:text-eco focus:outline-none focus-visible:ring-2 focus-visible:ring-eco"
           >
             Change
           </button>
         </div>
       )}
 
-      {/* One line, in the flow. The panel above floats because it is long; a
-          status line is short, and floating it would hide the guidance the
-          moment the driver moves down to fill the fields in by hand. */}
+      {/* Status lines, and the fields a driver fills in when the dataset has
+          nothing. All shrink-0: if space runs short it is the results list
+          that gives way, never the controls. */}
       {showResults && status === "loading" && (
         <p
           aria-live="polite"
-          className="flex items-center gap-2 px-1 text-xs text-gray-500"
+          className="flex shrink-0 items-center gap-2 px-1 text-xs text-muted-foreground"
         >
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Searching&hellip;
@@ -244,7 +301,7 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
       )}
 
       {showResults && status === "error" && (
-        <p aria-live="polite" className="px-1 text-xs text-amber-700">
+        <p aria-live="polite" className="shrink-0 px-1 text-xs text-amber-700">
           {error}
         </p>
       )}
@@ -252,7 +309,7 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
       {showResults && status === "ready" && results.length === 0 && (
         <p
           aria-live="polite"
-          className="flex items-start gap-2 px-1 text-xs text-gray-500"
+          className="flex shrink-0 items-start gap-2 px-1 text-xs text-muted-foreground"
         >
           <Search className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           Not in our database - fill in the year, fuel type and consumption
@@ -260,7 +317,7 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <SelectField
           label="Fuel type"
           placeholder="Select fuel type"
@@ -289,7 +346,7 @@ export default function VehiclePicker({ value, onChange }: VehiclePickerProps) {
             })
           }
           className={
-            selected ? "cursor-not-allowed bg-gray-100 text-gray-500" : undefined
+            selected ? "cursor-not-allowed bg-muted text-muted-foreground" : undefined
           }
         />
       </div>

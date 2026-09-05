@@ -93,6 +93,9 @@
   --border: oklch(0.92 0.004 286.32); /* #e4e4e7 zinc-200 */
   --input: oklch(0.92 0.004 286.32); /* #e4e4e7 */
   --ring: oklch(0.705 0.015 286.067); /* #a1a1aa zinc-400 */
+  /* Scrollbars. Quiet enough to ignore, present enough to grab. */
+  --scrollbar-thumb: oklch(0.871 0.006 286.286); /* #d4d4d8 zinc-300 */
+  --scrollbar-thumb-hover: oklch(0.705 0.015 286.067); /* #a1a1aa zinc-400 */
   --chart-1: oklch(0.596 0.145 163.225);
   --chart-2: oklch(0.552 0.016 285.938);
   --chart-3: oklch(0.442 0.017 285.786);
@@ -139,6 +142,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
+  --scrollbar-thumb: oklch(1 0 0 / 18%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 32%);
   --chart-1: oklch(0.696 0.17 162.48);
   --chart-2: oklch(0.705 0.015 286.067);
   --chart-3: oklch(0.552 0.016 285.938);
@@ -164,12 +169,58 @@
   html {
     @apply font-sans;
   }
+
+  /* Thin, quiet scrollbars everywhere, in place of the chunky grey default.
+
+     Two mechanisms because no single one is universal: `scrollbar-width` and
+     `scrollbar-color` are the standard and cover Firefox and Chrome 121+, and
+     the ::-webkit- pseudo-elements cover Safari and older Chromium. Applying
+     them to `*` is deliberate - neither property inherits, and every scrolling
+     container in the app is a different element.
+
+     Nothing is hidden outright: a scrollbar you cannot see is a page whose
+     content nobody knows continues. Note that macOS hides scrollbars until you
+     scroll anyway, so this is most visible on Windows and Linux, or with
+     "Show scroll bars: Always" set. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    /* A transparent border plus background-clip is what insets the thumb, so
+       it reads as a 4px pill with breathing room rather than a bar wedged
+       against the edge. */
+    background-color: var(--scrollbar-thumb);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
   /* Tailwind v4 dropped the browser default of cursor:pointer on buttons.
      Restored here once rather than per component, so anything clickable
      behaves the same - including buttons not built from components/ui.
-     Disabled controls keep the default arrow. */
+     Disabled controls keep the default arrow.
+
+     The menu and listbox roles are here for anything added later. Radix's own
+     items ship with a `cursor-default` utility class on them, and a utility
+     outranks @layer base, so those are corrected in the components themselves
+     - this rule alone would silently lose to them. */
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([data-disabled]),
+  [role="menuitemcheckbox"]:not([data-disabled]),
+  [role="menuitemradio"]:not([data-disabled]),
+  [role="option"]:not([data-disabled]),
   label[for],
   summary {
     @apply cursor-pointer;

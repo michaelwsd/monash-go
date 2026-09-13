@@ -328,11 +328,11 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Thirteen are callable; the six at the bottom are
+      running route table rather than the plan. Fourteen are callable; the six at the bottom are
       specified but not built, and calling one returns a 404 from the router, not from your code.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>13 live endpoints</span>
+      <span>14 live endpoints</span>
       <span>generated 13 Sep 2026</span>
     </div>
   </header>
@@ -369,7 +369,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The thirteen</div>
+    <div class="eyebrow">The fourteen</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -381,6 +381,7 @@ Content-Type: application/json</pre>
       <a href="#similar"><span class="verb v-get">get</span><span class="ipath">/api/v1/vehicles/reference/similar</span><span class="iwhat">near matches when the exact car is absent</span></a>
       <a href="#rides-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/rides</span><span class="iwhat">post a ride offer between two campuses</span></a>
       <a href="#rides-search"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/search</span><span class="iwhat">find rides with seats left on a given day</span></a>
+      <a href="#rides-mine"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/mine</span><span class="iwhat">the caller's own posted drives</span></a>
       <a href="#rides-detail"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/{ride_id}</span><span class="iwhat">one ride, with its driver, car and route</span></a>
       <a href="#bookings-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/bookings</span><span class="iwhat">claim a seat, atomically</span></a>
       <a href="#bookings-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/bookings/me</span><span class="iwhat">the caller's bookings</span></a>
@@ -865,6 +866,43 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       </div>
     </article>
 
+
+    <article class="endpoint" id="rides-mine">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/rides/mine</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Every ride the caller has posted as a driver, newest departure first, in every status -
+          a driver's own list is the one place a cancelled or completed ride still belongs. Same
+          row shape as search. An empty array is the ordinary answer for someone who has not
+          posted a drive.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/rides/mine</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  {
+    <span class="k">"id"</span>: "7c04…",
+    <span class="k">"origin"</span>: "clayton",
+    <span class="k">"destination"</span>: "caulfield",
+    <span class="k">"departure_at"</span>: "2026-09-09T23:00:00Z",
+    <span class="k">"available_seats"</span>: 3,
+    <span class="k">"status"</span>: "open"
+  }
+]</pre>
+          </div>
+        </div>
+        <div class="note"><strong>Registered before <code>/rides/{ride_id}</code>.</strong> The
+          two paths share a shape, and FastAPI matches in declaration order; the other way round,
+          <code>mine</code> would be parsed as a UUID and answer 422.</div>
+      </div>
+    </article>
+
     <article class="endpoint" id="rides-detail">
       <div class="ep-head">
         <span class="verb v-get">get</span>
@@ -1151,7 +1189,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
   </section>
 
   <footer>
-    <p>Read off the live route table on 13 September 2026, with Sprint 4's bookings landed. If this
+    <p>Read off the live route table on 13 September 2026, with Sprint 4's bookings landed and <code>GET /rides/mine</code> added for the frontend's My drives page. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

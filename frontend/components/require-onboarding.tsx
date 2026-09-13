@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
 import { Loader2 } from "lucide-react";
 
 import { syncUser } from "@/lib/api";
+import { CurrentUserContext } from "@/lib/use-current-user";
+import { useQuery } from "@/lib/use-query";
 
 /**
- * The first-sign-in gate.
+ * The first-sign-in gate, and the one place the current user is fetched.
  *
  * POST /users/sync runs on every load: it creates the users row and its rewards
  * row the first time and returns the existing one afterwards, so it doubles as
@@ -23,57 +24,28 @@ import { syncUser } from "@/lib/api";
  * The children are held back until the check resolves. Painting a dashboard and
  * then yanking it away reads as a bug; a brief spinner does not.
  *
- * Wrap protected pages with this. Today "/" is the only one, so it lives there.
- * Once there are several, move it into a shared layout for those routes - it
- * must not go in the root layout, which also covers /sign-in and /onboarding
- * itself, and gating /onboarding on onboarding would never terminate.
+ * The row is then shared through CurrentUserContext, so the header badge, the
+ * search form's default campus and the ride page's "is this my ride" check all
+ * read the one fetch instead of each making their own.
+ *
+ * Lives in the (app) layout. It must not go in the root layout, which also
+ * covers /sign-in and /onboarding itself - gating /onboarding on having
+ * finished onboarding would never terminate.
  */
-export function RequireOnboarding({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+export function RequireOnboarding({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
+  const query = useQuery((token) => syncUser({ token }), []);
 
-  // Clerk does not promise a stable getToken identity; a ref keeps this effect
-  // from re-running on every render. Same reasoning as lib/use-vehicle-search.
-  const getTokenRef = useRef(getToken);
-  useEffect(() => {
-    getTokenRef.current = getToken;
-  });
+  const needsOnboarding = query.status === "ready" && query.data?.home_campus === null;
 
   useEffect(() => {
-    // proxy.ts has already bounced signed-out visitors, so this is the brief
-    // moment before Clerk has hydrated rather than a real anonymous visit.
-    if (!isLoaded || !isSignedIn) return;
+    if (needsOnboarding) router.replace("/onboarding");
+  }, [needsOnboarding, router]);
 
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const user = await syncUser({ token: await getTokenRef.current() });
-        if (cancelled) return;
-
-        if (user.home_campus === null) {
-          router.replace("/onboarding");
-          return; // stay on the spinner; the route is already changing
-        }
-      } catch {
-        // A backend that is down must not lock anyone out of a page that does
-        // not need it yet. Let them through; the pages that do need data will
-        // report their own failure.
-      }
-      if (!cancelled) setChecked(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoaded, isSignedIn, router]);
-
-  if (!checked) {
+  // A backend that is down must not lock anyone out of a page that does not
+  // need it yet. Let them through with no user; the pages that need data will
+  // report their own failure.
+  if (query.status === "loading" || needsOnboarding) {
     return (
       <div className="flex flex-1 items-center justify-center bg-muted/40">
         <Loader2
@@ -84,5 +56,5 @@ export function RequireOnboarding({
     );
   }
 
-  return <>{children}</>;
+  return <CurrentUserContext.Provider value={query}>{children}</CurrentUserContext.Provider>;
 }

@@ -218,6 +218,53 @@ export function createVehicle(
   });
 }
 
+export type RideStatus = "open" | "full" | "in_progress" | "completed" | "cancelled";
+export type BookingStatus = "confirmed" | "cancelled" | "completed";
+
+/** backend/app/schemas/ride.py :: RideResponse. What search returns. */
+export interface Ride {
+  id: string;
+  driver_id: string;
+  vehicle_id: string;
+  origin: Campus;
+  destination: Campus;
+  /** UTC. Format with lib/time.ts, never bare toLocale*(). */
+  departure_at: string;
+  total_seats: number;
+  available_seats: number;
+  distance_km: number;
+  status: RideStatus;
+  created_at: string;
+}
+
+/**
+ * backend/app/schemas/ride.py :: RideDriver / RideDriverContact.
+ *
+ * `phone` is present only when the caller holds a confirmed booking on the
+ * ride - the backend picks between two response models, and the field does
+ * not exist on the other. So `"phone" in driver` is the booking check.
+ */
+export interface RideDriver {
+  id: string;
+  full_name: string;
+  phone?: string;
+}
+
+/** backend/app/schemas/ride.py :: RideDetail. What GET /rides/{id} returns. */
+export interface RideDetail extends Ride {
+  driver: RideDriver;
+  vehicle: Vehicle;
+  route_summary: string | null;
+}
+
+/** backend/app/schemas/booking.py :: BookingResponse */
+export interface Booking {
+  id: string;
+  ride_id: string;
+  status: BookingStatus;
+  created_at: string;
+}
+
 /**
  * GET /vehicles/me - every car the caller owns, newest first.
  *
@@ -226,4 +273,74 @@ export function createVehicle(
  */
 export function getMyVehicles(options: ApiOptions): Promise<Vehicle[]> {
   return apiFetch<Vehicle[]>("/vehicles/me", options);
+}
+
+export interface RideSearch {
+  origin: Campus;
+  destination: Campus;
+  /** A Melbourne calendar date, YYYY-MM-DD. */
+  on: string;
+}
+
+/** GET /rides/search - open rides with a seat left, earliest first. */
+export function searchRides(
+  { origin, destination, on }: RideSearch,
+  options: ApiOptions,
+): Promise<Ride[]> {
+  const params = new URLSearchParams({ origin, destination, on });
+  return apiFetch<Ride[]>(`/rides/search?${params.toString()}`, options);
+}
+
+/** GET /rides/mine - the caller's own posted rides, soonest departure first, any status. */
+export function getMyRides(options: ApiOptions): Promise<Ride[]> {
+  return apiFetch<Ride[]>("/rides/mine", options);
+}
+
+export function getRide(rideId: string, options: ApiOptions): Promise<RideDetail> {
+  return apiFetch<RideDetail>(`/rides/${rideId}`, options);
+}
+
+/**
+ * POST /rides. No distance and no available_seats: the backend takes distance
+ * from the cached route and starts every seat free, and refuses a body that
+ * tries to set either.
+ */
+export interface RideCreate {
+  vehicle_id: string;
+  origin: Campus;
+  destination: Campus;
+  /** Must carry a timezone. Build it with toMelbourneInstant. */
+  departure_at: string;
+  total_seats: number;
+}
+
+export function createRide(payload: RideCreate, options: ApiOptions): Promise<Ride> {
+  return apiFetch<Ride>("/rides", {
+    ...options,
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * POST /bookings - claims a seat, or 409s. The backend's `detail` says which
+ * kind of 409: the ride filled, or the caller already holds a seat. They read
+ * differently to a passenger, so surface the message rather than the code.
+ */
+export function createBooking(rideId: string, options: ApiOptions): Promise<Booking> {
+  return apiFetch<Booking>("/bookings", {
+    ...options,
+    method: "POST",
+    body: JSON.stringify({ ride_id: rideId }),
+  });
+}
+
+/** DELETE /bookings/{id} - idempotent; a second cancel is a 200 too. */
+export function cancelBooking(bookingId: string, options: ApiOptions): Promise<Booking> {
+  return apiFetch<Booking>(`/bookings/${bookingId}`, { ...options, method: "DELETE" });
+}
+
+/** GET /bookings/me - newest first, cancelled ones included. */
+export function getMyBookings(options: ApiOptions): Promise<Booking[]> {
+  return apiFetch<Booking[]>("/bookings/me", options);
 }

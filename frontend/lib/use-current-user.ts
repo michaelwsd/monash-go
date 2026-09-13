@@ -1,18 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { createContext, useContext } from "react";
 
-import { syncUser, type User } from "@/lib/api";
-
-export interface CurrentUserState {
-  user: User | null;
-  status: "loading" | "ready" | "error";
-  /** Replaces the cached user after a write, with no second round trip. */
-  setUser: (user: User) => void;
-  /** Refetches from the API. For a retry button on the error state. */
-  reload: () => void;
-}
+import type { User } from "@/lib/api";
+import type { QueryState } from "@/lib/use-query";
 
 /**
  * The signed-in user's row from our database, not Clerk's.
@@ -21,52 +12,21 @@ export interface CurrentUserState {
  * and avatar; our row owns the phone, campus, concession flag and green
  * points. Anything the backend stores comes from here.
  *
- * POST /users/sync is the read. It looks like a write, and it is on a first
- * sign-in, but afterwards it returns the existing row untouched - which is why
- * the frontend is expected to call it on every page load. There is no
- * GET /users/me.
- *
- * A Clerk session token expires in about a minute, so it is fetched per
- * request rather than held in state.
+ * Fetched once, by RequireOnboarding in the (app) layout, and shared through
+ * context. Before that existed, the shell and every page each called
+ * POST /users/sync for the same row - three round trips per page load.
  */
-export function useCurrentUser(): CurrentUserState {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [user, setUser] = useState<User | null>(null);
-  const [status, setStatus] = useState<CurrentUserState["status"]>("loading");
-  const [attempt, setAttempt] = useState(0);
+export type CurrentUser = QueryState<User>;
 
-  // setStatus belongs here rather than at the top of the effect: React 19
-  // flags a synchronous setState in an effect body, and an event handler is
-  // the correct place for it anyway.
-  const reload = useCallback(() => {
-    setStatus("loading");
-    setAttempt((n) => n + 1);
-  }, []);
+export const CurrentUserContext = createContext<CurrentUser | null>(null);
 
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const row = await syncUser({ token: await getToken() });
-        if (cancelled) return;
-        setUser(row);
-        setStatus("ready");
-      } catch {
-        // The page decides what to show; the hook only reports that it failed.
-        if (!cancelled) setStatus("error");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // getToken is deliberately absent: Clerk does not promise a stable
-    // identity for it, and including it would refetch on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, attempt]);
-
-  return { user, status, setUser, reload };
+export function useCurrentUser(): CurrentUser & {
+  user: User | null;
+  setUser: (user: User) => void;
+} {
+  const value = useContext(CurrentUserContext);
+  if (value === null) {
+    throw new Error("useCurrentUser must be used inside RequireOnboarding");
+  }
+  return { ...value, user: value.data, setUser: value.setData };
 }

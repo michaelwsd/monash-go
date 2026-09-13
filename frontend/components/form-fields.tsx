@@ -159,3 +159,34 @@ export function SelectField({
     </FieldLabel>
   );
 }
+
+
+/* Departure times, every 15 minutes, as a listbox. The native <input
+   type="time"> has the same problem as the date input: its picker is drawn by
+   the OS and takes no styling. Quarter-hours are how carpools are actually
+   arranged, and 96 options with typeahead is quicker than typing digits. */
+const TIME_OPTIONS: readonly SelectOption[] = Array.from({ length: 96 }, (_, i) => {
+  const h = String(Math.floor(i / 4)).padStart(2, "0");
+  const m = String((i % 4) * 15).padStart(2, "0");
+  return { value: `${h}:${m}`, label: `${h}:${m}` };
+});
+
+export function TimeField({
+  label,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <SelectField
+      label={label}
+      placeholder="Pick a time"
+      options={TIME_OPTIONS}
+      value={value}
+      onValueChange={onValueChange}
+    />
+  );
+}

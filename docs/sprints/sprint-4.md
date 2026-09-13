@@ -129,6 +129,10 @@ Postgres could find it, which is an argument for the `db`-marked tests.
 - **`GET /bookings/me` returns bookings, not trips.** It carries a `ride_id` and no route, time or
   driver, so a trips screen has to follow each booking to `GET /rides/{ride_id}`. If that proves
   awkward for the frontend, a joined response belongs in Sprint 5 rather than being bolted on here.
+- **`GET /rides/mine` was added after the sprint closed** (13/09/26), because the frontend's My
+  drives page had no way to list a driver's own rides. Repository `list_for_driver`, service
+  `list_for_driver`, route registered before `/{ride_id}`, covered at both layers and in the
+  frontend's `e2e:api` flow. The as-driver half of artboard 1j is buildable now.
 - **No `DELETE /vehicles/{id}`.** The frontend's My cars page has no way to remove a car.
   `rides.vehicle_id` is `ON DELETE RESTRICT`, so a car that has ever carried a ride cannot be hard
   deleted; a soft delete (`archived_at`, hidden from `GET /vehicles/me`) keeps ride history intact,

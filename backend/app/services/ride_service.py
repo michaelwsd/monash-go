@@ -75,6 +75,14 @@ def search(db: Client, *, origin: Campus, destination: Campus, on: date) -> list
     )
 
 
+def list_for_driver(db: Client, *, clerk_id: str) -> list[Ride]:
+    """The caller's own posted rides. Reads the database only - no route lookup."""
+    driver = user_repository.get_by_clerk_id(db, clerk_id)
+    if not driver:
+        raise NotFoundError("user not found")
+    return ride_repository.list_for_driver(db, driver_id=driver.id)
+
+
 def get_ride(db: Client, *, clerk_id: str, ride_id: UUID) -> RideDetail:
     """One ride, with the driver's contact details only if the caller has earned
     them.

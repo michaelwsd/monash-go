@@ -64,3 +64,19 @@ def get_ride(db: Client, ride_id: UUID) -> Ride | None:
     res = db.table(TABLE).select("*").eq("id", str(ride_id)).limit(1).execute()
 
     return Ride.model_validate(res.data[0]) if res.data else None
+
+
+def list_for_driver(db: Client, *, driver_id: UUID) -> list[Ride]:
+    """Every ride this driver has posted, soonest departure first, any status.
+
+    Any status on purpose: a driver's own list is the one place a cancelled or
+    completed ride still belongs, and it is the caller's own data.
+    """
+    res = (
+        db.table(TABLE)
+        .select("*")
+        .eq("driver_id", str(driver_id))
+        .order("departure_at", desc=True)
+        .execute()
+    )
+    return [Ride.model_validate(row) for row in res.data]

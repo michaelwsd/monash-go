@@ -136,6 +136,9 @@ class FakeRideRepo:
     def get_ride(self, db: object, ride_id: UUID) -> Ride | None:
         return next((ride for ride in self.rows if ride.id == ride_id), None)
 
+    def list_for_driver(self, db: object, *, driver_id: UUID) -> list[Ride]:
+        return [ride for ride in self.rows if ride.driver_id == driver_id]
+
     def insert(self, db: object, **fields: Any) -> Ride:
         ride = Ride(
             id=uuid4(),
@@ -835,3 +838,54 @@ def test_the_rest_of_the_response_is_the_same_either_way(
     assert without.keys() == with_phone.keys()
     del without["driver"], with_phone["driver"]
     assert without == with_phone
+
+
+# --- GET /rides/mine -----------------------------------------------------
+
+
+def test_my_rides_lists_what_i_posted(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    client, _, _, _ = wired
+    token = make_token(sub=CLERK_ID)
+    created = post_a_ride(client, token)
+
+    response = client.get(f"{RIDES_URL}/mine", headers=auth(token))
+
+    assert response.status_code == 200
+    assert [ride["id"] for ride in response.json()] == [created["id"]]
+
+
+def test_my_rides_is_empty_for_someone_who_has_not_posted(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    client, rides, _, _ = wired
+    post_a_ride(client, make_token(sub=CLERK_ID))
+    rides.rows[0] = rides.rows[0].model_copy(update={"driver_id": uuid4()})
+
+    response = client.get(f"{RIDES_URL}/mine", headers=auth(make_token(sub=CLERK_ID)))
+
+    assert response.json() == []
+
+
+def test_mine_is_not_swallowed_by_the_detail_route(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    """/rides/mine and /rides/{ride_id} share a shape. Registered after the
+    detail route, "mine" would be parsed as a UUID and 422."""
+    client, _, _, _ = wired
+
+    response = client.get(f"{RIDES_URL}/mine", headers=auth(make_token(sub=CLERK_ID)))
+
+    assert response.status_code == 200
+
+
+def test_my_rides_without_a_token_is_401(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+) -> None:
+    client, _, _, _ = wired
+
+    assert client.get(f"{RIDES_URL}/mine").status_code == 401

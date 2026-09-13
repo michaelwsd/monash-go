@@ -67,6 +67,11 @@ Runs on `http://localhost:3000`. `NEXT_PUBLIC_API_URL` must point at the backend
 same origin must appear in the backend's `CORS_ORIGINS` or every request is blocked by the
 browser.
 
+Pages under `app/(app)/` are the signed-in app - home, find a ride, post a drive, ride
+detail, my trips, my drives, my cars, profile. They share `components/app-shell.tsx` for the frame,
+`lib/use-query.ts` for fetching, and `lib/time.ts` for every date, which is always a
+Melbourne date. `lib/api.ts` is the only file that talks to the backend.
+
 ### Database
 
 The schema lives in `backend/supabase/migrations/` as numbered SQL files and is checked
@@ -205,7 +210,15 @@ uv run pytest                      # tests
 cd frontend
 npm run lint
 npm run build                      # catches type errors the dev server tolerates
+npm run e2e:api                    # the frontend's API client against the real backend
 ```
+
+`e2e:api` starts the backend itself with a throwaway Clerk key, signs tokens for a driver and
+a passenger, and walks the flow the pages make: post a drive, search for it, open it, book
+it, see the phone number appear, cancel, see it go. Every assertion is a field a page reads,
+and everything it writes to the database is deleted at the end. It needs `uv` and the
+backend's `.env`. There are no browser tests: every page sits behind Clerk's Google sign-in,
+which cannot be automated.
 
 The whole suite runs without a database or a network, which is the point. Tests marked
 `db` are excluded by `addopts` and need real Supabase credentials; run them deliberately
@@ -235,8 +248,8 @@ Grab `$TOKEN` from the browser devtools on a signed-in frontend session.
 live route table rather than the plan: request and response shapes, field rules, status
 codes, and a list of what is specified but not yet built. Open it in a browser.
 
-Thirteen endpoints are live as of Sprint 4: user sync and profile, vehicle registration and
-the reference lookup, the three rides endpoints, and the three bookings endpoints. The
+Fourteen endpoints are live as of Sprint 4: user sync and profile, vehicle registration and
+the reference lookup, the four rides endpoints, and the three bookings endpoints. The
 marketplace is complete - what remains reads that data rather than adding to it: the
 comparison dashboard, the points a completed ride earns, and the pet those points feed.
 

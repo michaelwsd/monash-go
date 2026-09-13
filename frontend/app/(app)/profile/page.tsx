@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { AlertCircle, Check, Loader2, Sprout } from "lucide-react";
+import { Check, Loader2, Sprout } from "lucide-react";
 
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { SelectField, TextField } from "@/components/form-fields";
+import { ErrorState, FormError, Skeleton } from "@/components/status-blocks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import {
   type Campus,
   type User,
 } from "@/lib/api";
+import { formatLongDate } from "@/lib/time";
 import { useCurrentUser } from "@/lib/use-current-user";
 
 const LABEL =
@@ -54,92 +56,67 @@ export default function ProfilePage() {
   const { user, status, setUser, reload } = useCurrentUser();
 
   return (
-    <div className="flex flex-1 flex-col bg-muted/40">
-      <AppHeader greenPoints={user?.green_points ?? 0} />
+    <AppShell title="Profile" subtitle="Your contact details and the campus you travel from.">
+      {status === "error" && (
+        <ErrorState message="Couldn't load your profile." onRetry={reload} />
+      )}
+      {status === "loading" && <Skeleton rows={2} lines={3} />}
 
-      <main className="mx-auto w-full max-w-[900px] flex-1 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="mb-4">
-          <h1 className="text-xl font-semibold tracking-[-0.025em]">Profile</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Your contact details and the campus you travel from.
-          </p>
-        </div>
-
-        {status === "error" && (
-          <Card className="items-center gap-2 p-8 text-center">
-            <AlertCircle className="size-5 text-muted-foreground" aria-hidden />
-            <p className="text-sm font-medium">
-              We couldn&apos;t load your profile.
-            </p>
-            <Button variant="outline" size="lg" onClick={reload}>
-              Try again
-            </Button>
-          </Card>
-        )}
-
-        {status === "loading" && <ProfileSkeleton />}
-
-        {status === "ready" && user && (
-          <div className="flex flex-col gap-3.5">
-            {/* Identity, read-only. Clerk's, not ours. */}
-            <Card className="gap-0 p-3.5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="min-w-0">
-                  <p className={LABEL}>Signed in as</p>
-                  <p className="mt-0.5 truncate text-base font-semibold tracking-[-0.02em]">
-                    {clerkUser?.fullName ?? user.full_name}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {user.email}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-                  <Badge
-                    variant="outline"
-                    className="gap-1 rounded-full border-eco-border bg-eco-muted font-medium text-eco-foreground"
-                  >
-                    <Sprout className="size-3 text-eco" aria-hidden />
-                    <span className="tabular-nums">
-                      {user.green_points.toLocaleString()}
-                    </span>
-                    pts
-                  </Badge>
-                  <Badge variant="secondary" className="rounded-full font-medium capitalize">
-                    {user.role}
-                  </Badge>
-                </div>
+      {status === "ready" && user && (
+        <div className="flex flex-col gap-3.5">
+          {/* Identity, read-only. Clerk's, not ours. */}
+          <Card className="gap-0 p-3.5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="min-w-0">
+                <p className={LABEL}>Signed in as</p>
+                <p className="mt-0.5 truncate text-base font-semibold tracking-[-0.02em]">
+                  {clerkUser?.fullName ?? user.full_name}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
-            </Card>
 
-            {/* Editable. Ours.
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                <Badge
+                  variant="outline"
+                  className="gap-1 rounded-full border-eco-border bg-eco-muted font-medium text-eco-foreground"
+                >
+                  <Sprout className="size-3 text-eco" aria-hidden />
+                  <span className="tabular-nums">{user.green_points.toLocaleString()}</span>
+                  pts
+                </Badge>
+                <Badge variant="secondary" className="rounded-full font-medium capitalize">
+                  {user.role}
+                </Badge>
+              </div>
+            </div>
+            <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+              Name and email come from your Monash Google account.
+            </p>
+          </Card>
 
-                Keyed on the row's id so the form remounts, and its state is
-                seeded from props by useState rather than by an effect that
-                copies props into state - which React 19 rejects outright, and
-                which would clobber an edit in progress on any refetch. */}
-            <TravelDetailsCard key={user.id} user={user} onSaved={setUser} />
+          {/* Editable. Ours.
 
-            <Card className="gap-0 p-3.5">
-              <p className={LABEL}>Member since</p>
-              <p className="mt-0.5 text-sm">
-                {new Date(user.joined_at).toLocaleDateString("en-AU", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-                {user.home_campus && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    &middot; travelling from {campusLabel(user.home_campus)}
-                  </span>
-                )}
-              </p>
-            </Card>
-          </div>
-        )}
-      </main>
-    </div>
+              Keyed on the row's id so the form remounts, and its state is
+              seeded from props by useState rather than by an effect that
+              copies props into state - which React 19 rejects outright, and
+              which would clobber an edit in progress on any refetch. */}
+          <TravelDetailsCard key={user.id} user={user} onSaved={setUser} />
+
+          <Card className="gap-0 p-3.5">
+            <p className={LABEL}>Member since</p>
+            <p className="mt-0.5 text-sm">
+              {formatLongDate(user.joined_at)}
+              {user.home_campus && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  &middot; travelling from {campusLabel(user.home_campus)}
+                </span>
+              )}
+            </p>
+          </Card>
+        </div>
+      )}
+    </AppShell>
   );
 }
 
@@ -250,15 +227,7 @@ function TravelDetailsCard({
         </div>
       </fieldset>
 
-      {error && (
-        <p
-          role="alert"
-          className="flex items-start gap-2 rounded-lg border border-destructive-border bg-destructive-muted px-3 py-2.5 text-xs text-destructive"
-        >
-          <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden />
-          {error}
-        </p>
-      )}
+      {error && <FormError>{error}</FormError>}
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         {/* aria-live so the confirmation is announced, not just seen. */}
@@ -329,18 +298,3 @@ function FareOption({
   );
 }
 
-function ProfileSkeleton() {
-  return (
-    <div className="flex flex-col gap-3.5" aria-hidden>
-      {[0, 1].map((row) => (
-        <Card key={row} className="gap-0 p-3.5">
-          <div className="animate-pulse space-y-2.5">
-            <div className="h-2 w-16 rounded bg-muted" />
-            <div className="h-4 w-48 rounded bg-muted" />
-            <div className="h-3 w-32 rounded bg-muted" />
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}

@@ -35,6 +35,11 @@ def search_rides(
 
 
 # frontend selects a ride and calls this in backend
+@router.get("/mine", response_model=list[RideResponse])
+def my_rides(clerk_id: CurrentUser, db: SupabaseDep) -> list[Ride]:
+    return ride_service.list_for_driver(db, clerk_id=clerk_id)
+
+
 # response_model is deliberately unset. It would coerce whatever the service
 # returns into one fixed shape, and coercing RideDetailWithContact down to
 # RideDetail is exactly the bug this endpoint must not have. The service picks

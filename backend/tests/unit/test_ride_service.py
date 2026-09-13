@@ -105,6 +105,10 @@ class FakeRideRepo:
         self.window = (window_start, window_end)
         return self.rows
 
+    def list_for_driver(self, db: object, *, driver_id: UUID) -> list[Ride]:
+        self.filters = None
+        return [ride for ride in self.rows if ride.driver_id == driver_id]
+
     def insert(self, db: object, **fields: Any) -> Ride:
         ride = Ride(
             id=uuid4(),
@@ -335,3 +339,34 @@ def test_search_makes_no_route_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert routes.calls == []
     assert rides.window is not None
+
+
+# --- my rides ------------------------------------------------------------
+
+
+def test_my_rides_are_only_the_ones_i_posted(monkeypatch: pytest.MonkeyPatch) -> None:
+    car = vehicle()
+    rides, _ = install(monkeypatch, car=car)
+    mine = ride_service.create(DB, HTTP, clerk_id=OWNER.clerk_id, payload=payload(car.id))
+    rides.rows.append(mine.model_copy(update={"id": uuid4(), "driver_id": uuid4()}))
+
+    listed = ride_service.list_for_driver(DB, clerk_id=OWNER.clerk_id)
+
+    assert [ride.id for ride in listed] == [mine.id]
+
+
+def test_my_rides_makes_no_route_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A listing is a read. A route lookup here would put a paid call on a
+    page a driver opens every day."""
+    _, routes = install(monkeypatch, car=vehicle())
+
+    ride_service.list_for_driver(DB, clerk_id=OWNER.clerk_id)
+
+    assert routes.calls == []
+
+
+def test_my_rides_for_an_unknown_caller_is_a_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    install(monkeypatch, car=vehicle())
+
+    with pytest.raises(NotFoundError):
+        ride_service.list_for_driver(DB, clerk_id="user_nobody")

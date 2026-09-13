@@ -23,9 +23,10 @@ import {
    My cars and Profile are deliberately absent: they are account settings, not
    sections of the app, so they live in the avatar menu with Sign out. */
 const NAV = [
-  { label: "Find a ride", href: "/rides", built: false },
-  { label: "Post a drive", href: "/rides/new", built: false },
-  { label: "My trips", href: "/trips", built: false },
+  { label: "Find a ride", href: "/rides", built: true },
+  { label: "Post a drive", href: "/rides/new", built: true },
+  { label: "My trips", href: "/trips", built: true },
+  { label: "My drives", href: "/drives", built: true },
 ];
 
 /**
@@ -33,9 +34,7 @@ const NAV = [
  * the avatar menu.
  *
  * A client component because signing out has to happen in the browser, where
- * the session lives. The nav links point at pages that do not exist yet, so
- * they are rendered as plain text rather than links - a link to a 404 is worse
- * than no link.
+ * the session lives. Below `sm` the nav is hidden and MobileTabs takes over.
  */
 export function AppHeader({ greenPoints }: { greenPoints: number }) {
   const { user } = useUser();
@@ -55,9 +54,12 @@ export function AppHeader({ greenPoints }: { greenPoints: number }) {
     <header className="border-b bg-muted/40">
       <div className="mx-auto flex h-14 w-full max-w-[900px] items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex items-center gap-4 sm:gap-[18px]">
-          <span className="text-[17px] font-semibold tracking-[-0.025em]">
+          <Link
+            href="/"
+            className="rounded text-[17px] font-semibold tracking-[-0.025em] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
             MonashGo
-          </span>
+          </Link>
           {/* Hidden below sm: at phone width the design uses a bottom tab bar
               (artboard 1d) rather than squeezing these in. */}
           <nav className="hidden items-center gap-[18px] sm:flex">

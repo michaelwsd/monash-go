@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { AlertCircle, Car, Fuel, Loader2, Plus } from "lucide-react";
+import { Car, Fuel, Loader2, Plus } from "lucide-react";
 
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
+import { EmptyState, ErrorState, FormError, Skeleton } from "@/components/status-blocks";
 import VehiclePicker, {
   EMPTY_CAR,
   fuelTypeLabel,
@@ -18,7 +19,6 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -30,7 +30,7 @@ import {
   getMyVehicles,
   type Vehicle,
 } from "@/lib/api";
-import { useCurrentUser } from "@/lib/use-current-user";
+import { useQuery } from "@/lib/use-query";
 
 const LABEL =
   "text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase";
@@ -43,119 +43,59 @@ const LABEL =
  * this page a prerequisite for posting a ride, not a settings afterthought.
  */
 export default function VehiclesPage() {
-  const { getToken } = useAuth();
-  const { user } = useCurrentUser();
-
-  const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const vehicles = useQuery((token) => getMyVehicles({ token }), []);
   const [adding, setAdding] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-
-  /* The fetch lives inside the effect rather than in a useCallback the effect
-     invokes. React 19's set-state-in-effect rule traces through a called
-     function and flags the setState at the far end of it, and the retry button
-     only needs to nudge a counter to run this again. Same shape as
-     useCurrentUser. */
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const rows = await getMyVehicles({ token: await getToken() });
-        if (cancelled) return;
-        setVehicles(rows);
-        setLoadError(false);
-      } catch {
-        if (!cancelled) setLoadError(true);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // getToken has no stable identity from Clerk, so it stays out of the deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt]);
-
-  const retry = () => {
-    setLoadError(false);
-    setAttempt((n) => n + 1);
-  };
 
   return (
-    <div className="flex flex-1 flex-col bg-muted/40">
-      <AppHeader greenPoints={user?.green_points ?? 0} />
+    <AppShell
+      title="My cars"
+      subtitle="A registered car is what lets you offer seats on a trip."
+      action={
+        vehicles.data && vehicles.data.length > 0 ? (
+          <Button size="lg" className="w-full sm:w-auto" onClick={() => setAdding(true)}>
+            <Plus aria-hidden />
+            Add a car
+          </Button>
+        ) : undefined
+      }
+    >
+      <AddVehicleDialog
+        open={adding}
+        onOpenChange={setAdding}
+        onAdded={(vehicle) => {
+          setAdding(false);
+          // Prepend rather than refetch: the list is newest first, and the
+          // response is the stored row, so it is already authoritative.
+          vehicles.setData([vehicle, ...(vehicles.data ?? [])]);
+        }}
+      />
 
-      <main className="mx-auto w-full max-w-[900px] flex-1 px-4 py-4 sm:px-6 sm:py-6">
-        {/* Stacks below sm. Side by side at 375px the heading loses so much
-            width that "A registered car is what lets you offer seats" wraps to
-            three lines beside a button. */}
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-[-0.025em]">
-              My cars
-            </h1>
-          </div>
-
-          {vehicles !== null && vehicles.length > 0 && (
-            <Button
-              size="lg"
-              className="w-full sm:w-auto"
-              onClick={() => setAdding(true)}
-            >
-              <Plus aria-hidden />
-              Add a car
-            </Button>
-          )}
-        </div>
-
-        <AddVehicleDialog
-          open={adding}
-          onOpenChange={setAdding}
-          onAdded={(vehicle) => {
-            setAdding(false);
-            // Prepend rather than refetch: the list is newest first, and the
-            // response is the stored row, so it is already authoritative.
-            setVehicles((current) => [vehicle, ...(current ?? [])]);
-          }}
-        />
-
-        <div className="flex flex-col gap-3.5">
-          {vehicles === null && !loadError && <VehiclesSkeleton />}
-
-          {loadError && (
-            <Card className="items-center gap-2 p-8 text-center">
-              <AlertCircle className="size-5 text-muted-foreground" aria-hidden />
-              <p className="text-sm font-medium">We couldn&apos;t load your cars.</p>
-              <Button variant="outline" size="lg" onClick={retry}>
-                Try again
-              </Button>
-            </Card>
-          )}
-
-          {vehicles?.length === 0 && (
-            <Card className="items-center gap-2 p-8 text-center">
-              <Car className="size-5 text-muted-foreground" aria-hidden />
-              <p className="text-sm font-medium">No cars registered yet</p>
-              <p className="max-w-xs text-xs text-muted-foreground">
-                Add one and we&apos;ll fill in its fuel use from the reference
-                data, so your trip&apos;s emissions are worked out for you.
-              </p>
-              <Button size="lg" className="mt-1" onClick={() => setAdding(true)}>
+      <div className="flex flex-col gap-3.5">
+        {vehicles.status === "loading" && <Skeleton rows={2} />}
+        {vehicles.status === "error" && (
+          <ErrorState message="Couldn't load your cars." onRetry={vehicles.reload} />
+        )}
+        {vehicles.data?.length === 0 && (
+          <EmptyState
+            icon={Car}
+            title="No cars registered yet"
+            body="Add one and its fuel use is filled in from the reference data."
+            action={
+              <Button size="lg" onClick={() => setAdding(true)}>
                 <Plus aria-hidden />
                 Add a car
               </Button>
-            </Card>
-          )}
-
-          {vehicles?.map((vehicle) => (
-            <VehicleCard key={vehicle.id} vehicle={vehicle} />
-          ))}
-        </div>
-      </main>
-    </div>
+            }
+          />
+        )}
+        {vehicles.data?.map((vehicle) => (
+          <VehicleCard key={vehicle.id} vehicle={vehicle} />
+        ))}
+      </div>
+    </AppShell>
   );
 }
+
 
 function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   const unit = consumptionUnit(vehicle.fuel_type);
@@ -189,24 +129,6 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         </div>
       </div>
     </Card>
-  );
-}
-
-function VehiclesSkeleton() {
-  return (
-    <>
-      {[0, 1].map((row) => (
-        <Card key={row} className="gap-0 p-3.5" aria-hidden>
-          <div className="flex animate-pulse items-center gap-3">
-            <div className="flex-1 space-y-2">
-              <div className="h-2 w-10 rounded bg-muted" />
-              <div className="h-4 w-40 rounded bg-muted" />
-            </div>
-            <div className="h-5 w-16 rounded-full bg-muted" />
-          </div>
-        </Card>
-      ))}
-    </>
   );
 }
 
@@ -282,7 +204,7 @@ function AddVehicleDialog({
           that can shrink, so the fuel fields and the Save button stay on
           screen. svh rather than vh, which ignores the browser's own chrome
           and overshoots on mobile Safari. */}
-      <DialogContent className="max-h-[85svh] sm:max-w-2xl">
+      <DialogContent className="max-h-[85svh] sm:max-w-2xl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Add a car</DialogTitle>
         </DialogHeader>
@@ -293,15 +215,7 @@ function AddVehicleDialog({
         <DialogBody className="flex min-h-0 flex-initial flex-col overflow-hidden pb-1">
           <VehiclePicker value={car} onChange={setCar} className="min-h-0" />
 
-          {error && (
-            <p
-              role="alert"
-              className="mt-3 flex shrink-0 items-start gap-2 rounded-lg border border-destructive-border bg-destructive-muted px-3 py-2.5 text-xs text-destructive"
-            >
-              <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden />
-              {error}
-            </p>
-          )}
+          {error && <FormError className="mt-3 shrink-0">{error}</FormError>}
         </DialogBody>
 
         <DialogFooter>

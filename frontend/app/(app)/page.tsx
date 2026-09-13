@@ -1,256 +1,157 @@
-import { ArrowRight, MapPin, MessageSquare } from "lucide-react";
+"use client";
 
-import { AppHeader } from "@/components/app-header";
-import { Co2Sparkline } from "@/components/co2-sparkline";
+import Link from "next/link";
+import { ArrowRight, Car, Phone } from "lucide-react";
+
+import { AppShell } from "@/components/app-shell";
+import { ErrorState, Skeleton } from "@/components/status-blocks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import {
-  comparison,
-  impact,
-  nextTrip,
-  rewards,
-  suggestedRides,
-  weeklyCo2Kg,
-} from "@/lib/fake-dashboard";
+import { campusLabel, getMyVehicles } from "@/lib/api";
+import { formatTime, isUpcoming, relativeDay } from "@/lib/time";
+import { useCurrentUser } from "@/lib/use-current-user";
+import { useQuery } from "@/lib/use-query";
+import { nextTrip, useMyTrips, type Trip } from "@/lib/use-trips";
 
-const LABEL =
-  "text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase";
+const LABEL = "text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase";
 
 /**
- * Home dashboard. Follows artboard 1f of "MonashGo Wireframes v2":
- * "next trip first, then quick actions, then cumulative impact. Pet reduced to
- * a points badge in the nav, per your call."
- *
- * Every figure on this page comes from lib/fake-dashboard.ts and is a
- * placeholder. Nothing here talks to the backend yet.
- *
- * proxy.ts protects this route, so reaching it at all means a valid session.
+ * Home. Artboard 1f, cut down to what the backend can answer today: the next
+ * trip, the two things a person comes here to do, and what their bookings add
+ * up to. CO2 and rewards return with their endpoints.
  */
 export default function DashboardPage() {
+  const trips = useMyTrips();
+  const vehicles = useQuery((token) => getMyVehicles({ token }), []);
+  const { user } = useCurrentUser();
+
   return (
-    <div className="flex flex-1 flex-col bg-muted/40">
-      <AppHeader greenPoints={rewards.greenPoints} />
-
-      <main className="mx-auto w-full max-w-[900px] flex-1 px-4 py-4 sm:px-6 sm:py-6">
-        {/* One column on a phone; the design's 1.5fr / 1fr split from sm up. */}
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-[1.5fr_1fr]">
-          <Card className="gap-0 p-3.5 sm:col-span-2">
-            <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center">
-              <div className="min-w-0">
-                <p className="text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-                  Next trip &middot; {nextTrip.when}
-                </p>
-                <p className="mt-0.5 text-xl font-semibold tracking-[-0.025em] tabular-nums">
-                  {nextTrip.departsAt} {nextTrip.origin} &rarr;{" "}
-                  {nextTrip.destination}
-                </p>
-                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-                  <span>{nextTrip.driver}</span>
-                  <span aria-hidden>&middot;</span>
-                  <span>{nextTrip.vehicle}</span>
-                  <span aria-hidden>&middot;</span>
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="size-3" aria-hidden />
-                    meet at {nextTrip.meetingPoint}
-                  </span>
-                </p>
-              </div>
-
-              <div className="flex gap-2 sm:ml-auto">
-                <Button variant="outline" size="lg" className="flex-1 sm:flex-none">
-                  <MessageSquare aria-hidden />
-                  Message
-                </Button>
-                <Button size="lg" className="flex-1 sm:flex-none">
-                  View trip
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="gap-0 p-3.5">
-            <p className="text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-              Your impact
-            </p>
-
-            <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-3">
-              <div>
-                <dd className="text-2xl font-semibold tracking-[-0.025em] text-eco-foreground tabular-nums">
-                  {impact.co2AvoidedKg} kg
-                </dd>
-                <dt className="text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-                  CO&#8322; avoided
-                </dt>
-              </div>
-              <div>
-                <dd className="text-2xl font-semibold tracking-[-0.025em] tabular-nums">
-                  {impact.sharedTrips}
-                </dd>
-                <dt className="text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-                  shared trips
-                </dt>
-              </div>
-              <div>
-                <dd className="text-2xl font-semibold tracking-[-0.025em] tabular-nums">
-                  ${impact.dollarsSaved}
-                </dd>
-                <dt className="text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-                  saved
-                </dt>
-              </div>
-            </dl>
-
-            <Co2Sparkline weeklyKg={weeklyCo2Kg} className="mt-3" />
-            <p className="mt-1.5 text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-              CO&#8322; avoided per week &middot; last {weeklyCo2Kg.length} weeks
-            </p>
-          </Card>
-
-          <div className="flex flex-col gap-2.5">
-            <Button size="lg" className="h-11 w-full justify-center">
-              Find a ride
-              <ArrowRight aria-hidden />
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-11 w-full justify-center"
-            >
-              Post a drive
-            </Button>
-
-            <Card className="gap-0 p-2.75">
-              <p className="text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-                Rewards
-              </p>
-              <p className="mt-1.5 text-xs tabular-nums">
-                {rewards.greenPoints.toLocaleString()} pts &middot;{" "}
-                {rewards.pointsToNextStage} to next pet stage
-              </p>
-              <Progress
-                value={rewards.stageProgressPercent}
-                className="mt-1.5 h-2 [&>*]:bg-eco"
-              />
-            </Card>
-          </div>
+    <AppShell>
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-[1.5fr_1fr]">
+        <div className="sm:col-span-2">
+          {trips.status === "loading" && <Skeleton rows={1} lines={3} />}
+          {trips.status === "error" && (
+            <ErrorState message="Couldn't load your trips." onRetry={trips.reload} />
+          )}
+          {trips.status === "ready" && trips.data && <NextTrip trip={nextTrip(trips.data)} />}
         </div>
 
-        {/* Ride cards, following artboard 1a. */}
-        <section className="mt-3.5">
-          <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h2 className="text-[13px] font-semibold">
-              Rides on your usual route
-            </h2>
-            <span className="text-xs text-muted-foreground">
-              Clayton &rarr; Caulfield &middot; tomorrow
+        <Card className="gap-0 p-3.5">
+          <p className={LABEL}>Your trips</p>
+          <Stats
+            trips={trips.data}
+            cars={vehicles.data?.length ?? null}
+            points={user?.green_points ?? null}
+          />
+        </Card>
+
+        <div className="flex flex-col gap-2.5">
+          <Button size="lg" className="h-11 w-full justify-center" asChild>
+            <Link href="/rides">
+              Find a ride
+              <ArrowRight aria-hidden />
+            </Link>
+          </Button>
+          <Button variant="outline" size="lg" className="h-11 w-full justify-center" asChild>
+            <Link href="/rides/new">
+              <Car aria-hidden />
+              Post a drive
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+/**
+ * What the bookings add up to. Every number here is derived from data the
+ * page already fetched; nothing is estimated. A null shows as a dash while
+ * its source is still loading, so the tiles keep their place.
+ */
+function Stats({
+  trips,
+  cars,
+  points,
+}: {
+  trips: Trip[] | null;
+  cars: number | null;
+  points: number | null;
+}) {
+  const past = trips?.filter((t) => !isUpcoming(t.ride.departure_at)) ?? null;
+  const upcoming = trips?.filter((t) => isUpcoming(t.ride.departure_at)) ?? null;
+  const km = past?.reduce((sum, t) => sum + t.ride.distance_km, 0) ?? null;
+
+  const tiles: { value: string; label: string; eco?: boolean }[] = [
+    { value: past ? String(past.length) : "–", label: "trips taken" },
+    { value: upcoming ? String(upcoming.length) : "–", label: "coming up" },
+    { value: km !== null ? `${km.toFixed(0)} km` : "–", label: "shared", eco: true },
+    { value: points !== null ? points.toLocaleString() : "–", label: "green points" },
+    { value: cars !== null ? String(cars) : "–", label: cars === 1 ? "car" : "cars" },
+  ];
+
+  return (
+    <dl className="mt-2 grid grid-cols-3 gap-x-4 gap-y-3 sm:grid-cols-2">
+      {tiles.map(({ value, label, eco }) => (
+        <div key={label}>
+          <dd
+            className={`text-2xl font-semibold tracking-[-0.025em] tabular-nums ${
+              eco ? "text-eco-foreground" : ""
+            }`}
+          >
+            {value}
+          </dd>
+          <dt className={LABEL}>{label}</dt>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function NextTrip({ trip }: { trip: Trip | null }) {
+  if (!trip) {
+    return (
+      <Card className="gap-0 p-3.5">
+        <p className={LABEL}>Next trip</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">Nothing booked yet.</p>
+      </Card>
+    );
+  }
+
+  const { ride } = trip;
+
+  return (
+    <Card className="gap-0 p-3.5">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center">
+        <div className="min-w-0">
+          <p className={LABEL}>Next trip &middot; {relativeDay(ride.departure_at)}</p>
+          <p className="mt-0.5 text-xl font-semibold tracking-[-0.025em] tabular-nums">
+            {formatTime(ride.departure_at)} {campusLabel(ride.origin)} &rarr;{" "}
+            {campusLabel(ride.destination)}
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+            <span>{ride.driver.full_name}</span>
+            <span aria-hidden>&middot;</span>
+            <span>
+              {ride.vehicle.make} {ride.vehicle.model}
             </span>
-          </div>
+          </p>
+        </div>
 
-          <div className="flex flex-col gap-2.5">
-            {suggestedRides.map((ride) => {
-              const full = ride.seatsLeft === 0;
-              return (
-                <Card
-                  key={ride.id}
-                  className={`flex-row items-center gap-3 p-3 ${full ? "opacity-55" : ""}`}
-                >
-                  <div className="min-w-[52px] text-center">
-                    <p className="text-lg font-semibold tracking-[-0.025em] tabular-nums">
-                      {ride.departsAt}
-                    </p>
-                    <p className={LABEL}>{ride.durationMin} min</p>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold">
-                      {ride.driver} &middot; {ride.vehicle}
-                    </p>
-                    <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">
-                      {full
-                        ? "Full - 0 seats left"
-                        : `${ride.route} · ${ride.seatsLeft} of ${ride.totalSeats} seats left`}
-                    </p>
-                    {!full && (
-                      <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 text-[11.5px] tabular-nums">
-                        <span className="font-semibold text-eco-foreground">
-                          {ride.co2PerPersonKg.toFixed(2)} kg CO&#8322;
-                        </span>
-                        <span>~${ride.costPerPerson.toFixed(2)} ea.</span>
-                        <span className="hidden text-muted-foreground sm:inline">
-                          saves {ride.co2SavedKg.toFixed(2)} kg
-                        </span>
-                      </p>
-                    )}
-                  </div>
-
-                  <Button
-                    variant={full ? "outline" : "default"}
-                    size="lg"
-                    className="shrink-0"
-                  >
-                    {full ? "Waitlist" : "Book"}
-                  </Button>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Requirement 4, in miniature: the same trip priced three ways. */}
-        <section className="mt-3.5">
-          <h2 className="mb-2 text-[13px] font-semibold">
-            Tomorrow&rsquo;s trip, three ways
-          </h2>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-            {comparison.map((row) => (
-              <Card
-                key={row.mode}
-                className={`gap-0 p-3 ${row.best ? "border-eco-border bg-eco-muted" : ""}`}
-              >
-                <p className="flex items-center gap-1.5 text-[13px] font-semibold">
-                  {row.mode}
-                  {row.best && (
-                    <span className="rounded-full bg-eco px-1.5 py-px text-[9px] font-semibold tracking-wide text-white uppercase">
-                      Best
-                    </span>
-                  )}
-                </p>
-                <dl className="mt-2 flex gap-4">
-                  <div>
-                    <dd className="text-base font-semibold tabular-nums">
-                      {row.minutes}m
-                    </dd>
-                    <dt className={LABEL}>time</dt>
-                  </div>
-                  <div>
-                    <dd className="text-base font-semibold tabular-nums">
-                      ${row.cost.toFixed(2)}
-                    </dd>
-                    <dt className={LABEL}>cost</dt>
-                  </div>
-                  <div>
-                    {/* Deliberately not green. Tinting every row's CO2 figure
-                        eco-green puts an approving colour on "drive alone",
-                        which is the worst option here. The Best badge and the
-                        tinted card carry the judgement; the numbers stay ink. */}
-                    <dd className="text-base font-semibold tabular-nums">
-                      {row.co2Kg.toFixed(2)}
-                    </dd>
-                    <dt className={LABEL}>kg CO&#8322;</dt>
-                  </div>
-                </dl>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        <p className="mt-3.5 rounded-md border bg-muted/50 p-3 text-[11.5px]/[1.5] text-muted-foreground">
-          Placeholder data. Every figure on this page comes from{" "}
-          <code className="font-mono">lib/fake-dashboard.ts</code> - nothing is
-          fetched from the API yet.
-        </p>
-      </main>
-    </div>
+        <div className="flex gap-2 sm:ml-auto">
+          {ride.driver.phone && (
+            <Button variant="outline" size="lg" className="flex-1 sm:flex-none" asChild>
+              <a href={`tel:${ride.driver.phone}`}>
+                <Phone aria-hidden />
+                Call
+              </a>
+            </Button>
+          )}
+          <Button size="lg" className="flex-1 sm:flex-none" asChild>
+            <Link href={`/rides/${ride.id}`}>View trip</Link>
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }

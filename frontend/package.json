@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "e2e:api": "node --experimental-transform-types --no-warnings e2e/api-flow.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.0",

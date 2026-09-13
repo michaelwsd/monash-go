@@ -53,3 +53,11 @@ class UpstreamServiceError(DomainError):
     """an external API we depend on failed, timed out, or refused us"""
 
     status_code = 502
+
+
+class RideFullError(DomainError):
+    status_code = 409
+
+
+class AlreadyBookedError(DomainError):
+    status_code = 409

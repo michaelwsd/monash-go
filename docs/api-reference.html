@@ -328,12 +328,12 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Ten are callable; the nine at the bottom are
+      running route table rather than the plan. Thirteen are callable; the six at the bottom are
       specified but not built, and calling one returns a 404 from the router, not from your code.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>10 live endpoints</span>
-      <span>generated 5 Sep 2026</span>
+      <span>13 live endpoints</span>
+      <span>generated 13 Sep 2026</span>
     </div>
   </header>
 
@@ -369,7 +369,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The ten</div>
+    <div class="eyebrow">The thirteen</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -382,6 +382,9 @@ Content-Type: application/json</pre>
       <a href="#rides-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/rides</span><span class="iwhat">post a ride offer between two campuses</span></a>
       <a href="#rides-search"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/search</span><span class="iwhat">find rides with seats left on a given day</span></a>
       <a href="#rides-detail"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/{ride_id}</span><span class="iwhat">one ride, with its driver, car and route</span></a>
+      <a href="#bookings-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/bookings</span><span class="iwhat">claim a seat, atomically</span></a>
+      <a href="#bookings-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/bookings/me</span><span class="iwhat">the caller's bookings</span></a>
+      <a href="#bookings-cancel"><span class="verb v-delete">del</span><span class="ipath">/api/v1/bookings/{booking_id}</span><span class="iwhat">give the seat back</span></a>
     </nav>
   </section>
 
@@ -912,14 +915,162 @@ Authorization: Bearer &lt;clerk_jwt&gt;
             </tbody>
           </table>
         </div>
-        <div class="note"><strong>No phone number, by design.</strong> The
-          <code>driver</code> object carries an id and a name and nothing else. Contact details
-          are revealed once a booking is confirmed, which is Sprint 4's work.</div>
+        <div class="note"><strong>The <code>driver</code> object changes shape once you have a
+          seat.</strong> To anyone else it is an id and a name, and the <code>phone</code> key is
+          <em>absent</em> - not null, absent. Once the caller holds a confirmed booking on this
+          ride the same request answers with the number included:
+<pre><span class="k">"driver"</span>: {
+  <span class="k">"id"</span>: "3f1c…",
+  <span class="k">"full_name"</span>: "Michael Wang",
+  <span class="k">"phone"</span>: "0416751630"
+}</pre>
+          Nothing else in the response differs. Cancelling the booking takes the number away
+          again. Two response models decide this, not a conditional that deletes a key, so a
+          field added to the wrong model cannot leak one.</div>
         <div class="note"><strong><code>route_summary</code> can be null, and that is not an
           error.</strong> It is the cached driving route for the pair, and this endpoint reads
           the cache without refilling it: a page view should never trigger a paid Maps call.
           Render the ride without it. It describes the drive; the public transport comparison
           arrives with <code>GET /compare/{ride_id}</code>.</div>
+      </div>
+    </article>
+  </section>
+
+
+  <section id="bookings">
+    <div class="eyebrow">Bookings</div>
+    <h2>Claiming and releasing a seat</h2>
+
+    <article class="endpoint" id="bookings-create">
+      <div class="ep-head">
+        <span class="verb v-post">post</span>
+        <span class="ep-path">/api/v1/bookings</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Takes the last seat, or tells you someone else got it. The body carries a ride and
+          nothing else - the passenger is whoever the token says.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request body</div>
+<pre>{ <span class="k">"ride_id"</span>: "7c04…" }</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">201</div>
+<pre>{
+  <span class="k">"id"</span>: "b91f…",
+  <span class="k">"ride_id"</span>: "7c04…",
+  <span class="k">"status"</span>: "confirmed",
+  <span class="k">"created_at"</span>: "2026-09-13T02:41:07Z"
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">400</td><td>The caller is the ride's driver. A driver in their own passenger list is counted twice by the emissions maths</td></tr>
+              <tr><td class="num">404</td><td>No such ride, or no user row for this token</td></tr>
+              <tr><td class="num">409</td><td>The ride filled up, or the caller already holds a seat on it</td></tr>
+              <tr><td class="num">422</td><td>A missing or malformed <code>ride_id</code>, or any other field - the body forbids extras</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>409 is two different things.</strong> Both mean "no seat for
+          you", but they read differently to a passenger: <em>ride is full</em> means somebody
+          beat you to it and the ride is worth forgetting, while <em>already booked</em> means
+          you have a seat already and should look at your trips. Use the <code>detail</code>
+          string to tell them apart.</div>
+        <div class="note"><strong>Booking is atomic, and that is not incidental.</strong> The
+          seat check, the decrement and the insert happen inside one Postgres function holding a
+          row lock, so ten simultaneous requests for one seat produce exactly one 201 and nine
+          409s. Doing it in application code leaves a gap in which two callers both read the same
+          seat count. Proved by
+          <code>tests/integration/test_booking_concurrency.py</code>.</div>
+        <div class="note"><strong>Booking a ride you did not post makes you both.</strong> A
+          driver who claims a seat elsewhere has their <code>role</code> moved from
+          <code>driver</code> to <code>both</code>, the mirror of what registering a vehicle
+          does.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="bookings-me">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/bookings/me</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Every booking the caller holds, newest first, cancelled ones included - the
+          <code>status</code> field is what separates them. An empty array is the ordinary answer
+          for someone who has not booked anything.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/bookings/me</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  {
+    <span class="k">"id"</span>: "b91f…",
+    <span class="k">"ride_id"</span>: "7c04…",
+    <span class="k">"status"</span>: "confirmed",
+    <span class="k">"created_at"</span>: "2026-09-13T02:41:07Z"
+  }
+]</pre>
+          </div>
+        </div>
+        <div class="note"><strong>It returns bookings, not trips.</strong> There is no route, time
+          or driver here - only a <code>ride_id</code>. A trips screen has to follow each one to
+          <code>GET /rides/{ride_id}</code>, which is also where the driver's phone number
+          appears once the booking is confirmed.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="bookings-cancel">
+      <div class="ep-head">
+        <span class="verb v-delete">del</span>
+        <span class="ep-path">/api/v1/bookings/{booking_id}</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Gives the seat back and returns the cancelled booking. The ride's seat count goes up,
+          and a ride that had filled returns to <code>open</code> so it can be found again.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>DELETE /api/v1/bookings/b91f…</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"id"</span>: "b91f…",
+  <span class="k">"ride_id"</span>: "7c04…",
+  <span class="k">"status"</span>: "cancelled",
+  <span class="k">"created_at"</span>: "2026-09-13T02:41:07Z"
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">404</td><td>No such booking, <em>or it belongs to someone else</em></td></tr>
+              <tr><td class="num">422</td><td>The path segment is not a UUID</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Cancelling twice is a success, not an error.</strong> The second
+          call answers 200 with the same cancelled booking and does not hand back a second seat.
+          A passenger who taps cancel twice has done nothing wrong, so the endpoint does not
+          treat it as a failure.</div>
+        <div class="note"><strong>Someone else's booking answers 404, not 403.</strong> A 403
+          would confirm that the id is real and simply not yours, which is more than a stranger
+          needs to know.</div>
+        <div class="note"><strong>The seat is genuinely reusable.</strong> Cancelling and booking
+          the same ride again works: the original booking is revived rather than blocked by the
+          one-booking-per-passenger constraint.</div>
       </div>
     </article>
   </section>
@@ -939,6 +1090,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
           <tr><td class="num">401</td><td class="name">InvalidCredentialsError</td><td>Token missing, malformed, expired, or not signed by Clerk</td></tr>
           <tr><td class="num">403</td><td class="name">PermissionDeniedError</td><td>Authenticated, but not allowed. Today: a non-Monash email</td></tr>
           <tr><td class="num">404</td><td class="name">NotFoundError</td><td>Does not exist, or the caller may not know that it does</td></tr>
+          <tr><td class="num">409</td><td class="name">RideFullError<br>AlreadyBookedError</td><td>Nothing wrong with the request; the world changed underneath it</td></tr>
           <tr><td class="num">422</td><td class="name">FastAPI validation</td><td>Body or query does not match the schema</td></tr>
           <tr><td class="num">500</td><td class="name">DomainError</td><td>A rule with no more specific subclass. Treat as a bug</td></tr>
           <tr><td class="num">502</td><td class="name">UpstreamServiceError</td><td>Google Maps or Servo Saver failed, timed out, or refused us</td></tr>
@@ -970,11 +1122,12 @@ Authorization: Bearer &lt;clerk_jwt&gt;
         <thead><tr><th>Enum</th><th>Values</th></tr></thead>
         <tbody>
           <tr><td class="name">ride_status</td><td><code>open</code> <code>full</code> <code>in_progress</code> <code>completed</code> <code>cancelled</code></td></tr>
+          <tr><td class="name">booking_status</td><td><code>confirmed</code> <code>cancelled</code> <code>completed</code></td></tr>
         </tbody>
       </table>
     </div>
-    <p class="measure"><code>booking_status</code> and <code>accessory_category</code> exist in the
-      database but no endpoint returns them yet.</p>
+    <p class="measure"><code>accessory_category</code> exists in the database but no endpoint
+      returns it yet.</p>
   </section>
 
   <section id="planned">
@@ -984,9 +1137,6 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       on the router. A request to any of them gets a 404 from FastAPI before reaching any of your
       code, so do not build against them yet.</p>
     <div class="planned">
-      <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/bookings</span><span class="sprint">sprint 4</span></div>
-      <div class="row"><span class="verb v-delete">del</span><span class="ppath">/api/v1/bookings/{booking_id}</span><span class="sprint">sprint 4</span></div>
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/bookings/me</span><span class="sprint">sprint 4</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/compare/{ride_id}</span><span class="sprint">sprint 5</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rewards/me</span><span class="sprint">sprint 5</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/me</span><span class="sprint">sprint 6</span></div>
@@ -994,14 +1144,14 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/pet/accessories/buy</span><span class="sprint">sprint 6</span></div>
       <div class="row"><span class="verb v-put">put</span><span class="ppath">/api/v1/pet/accessories/{id}/equip</span><span class="sprint">sprint 6</span></div>
     </div>
-    <div class="note"><strong>The route cache is already load-bearing.</strong> The twenty drive
-      routes are seeded, and <code>POST /rides</code> reads its <code>distance_km</code> from them.
-      The transit half is fetched lazily and has no consumer until
-      <code>GET /compare/{ride_id}</code>.</div>
+    <div class="note"><strong>Everything left is a calculation or a reward.</strong> The
+      marketplace is complete: rides can be posted, found, opened and booked. What remains reads
+      that data rather than adding to it - the comparison dashboard, the points a completed ride
+      earns, and the pet those points feed.</div>
   </section>
 
   <footer>
-    <p>Read off the live route table on 5 September 2026, with Sprint 3's rides endpoints landed. If this
+    <p>Read off the live route table on 13 September 2026, with Sprint 4's bookings landed. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

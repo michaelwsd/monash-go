@@ -5,9 +5,22 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from app.exceptions.errors import InvalidInputError, NotFoundError, PermissionDeniedError
-from app.repositories import ride_repository, route_repository, user_repository, vehicle_repository
+from app.repositories import (
+    booking_repository,
+    ride_repository,
+    route_repository,
+    user_repository,
+    vehicle_repository,
+)
 from app.schemas.enums import Campus
-from app.schemas.ride import Ride, RideCreate, RideDetail, RideDriver
+from app.schemas.ride import (
+    Ride,
+    RideCreate,
+    RideDetail,
+    RideDetailWithContact,
+    RideDriver,
+    RideDriverContact,
+)
 from app.schemas.vehicle import VehicleResponse
 from app.services import route_service
 from supabase import Client
@@ -62,7 +75,16 @@ def search(db: Client, *, origin: Campus, destination: Campus, on: date) -> list
     )
 
 
-def get_ride(db: Client, *, ride_id: UUID) -> RideDetail:
+def get_ride(db: Client, *, clerk_id: str, ride_id: UUID) -> RideDetail:
+    """One ride, with the driver's contact details only if the caller has earned
+    them.
+
+    Two response models rather than one model and a conditional delete: a
+    RideDetail literally has no phone field to leak, so the rule holds even if
+    someone later adds a field to RideDriver by accident. Which model is built
+    is the whole enforcement (CLAUDE.md: "Every route declares its response
+    schema. That is what stops a phone number leaking.").
+    """
     ride = ride_repository.get_ride(db, ride_id)
     if not ride:
         raise NotFoundError("ride not found")
@@ -77,9 +99,21 @@ def get_ride(db: Client, *, ride_id: UUID) -> RideDetail:
         db, origin=ride.origin, destination=ride.destination, travel_mode="drive"
     )
 
-    return RideDetail(
+    shared = {
         **ride.model_dump(),
-        driver=RideDriver(id=owner.id, full_name=owner.full_name),
-        vehicle=VehicleResponse(**vehicle.model_dump()),
-        route_summary=route.route_summary if route else None,
+        "vehicle": VehicleResponse(**vehicle.model_dump()),
+        "route_summary": route.route_summary if route else None,
+    }
+
+    viewer = user_repository.get_by_clerk_id(db, clerk_id)
+    booked = viewer is not None and (
+        booking_repository.get_confirmed(db, ride_id=ride.id, passenger_id=viewer.id) is not None
     )
+
+    if booked:
+        return RideDetailWithContact(
+            **shared,
+            driver=RideDriverContact(id=owner.id, full_name=owner.full_name, phone=owner.phone),
+        )
+
+    return RideDetail(**shared, driver=RideDriver(id=owner.id, full_name=owner.full_name))

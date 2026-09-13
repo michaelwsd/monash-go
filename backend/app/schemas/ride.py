@@ -65,13 +65,38 @@ class RideResponse(BaseModel):
 
 
 class RideDriver(BaseModel):
-    """Just the name. Phone is revealed after a booking is confirmed."""
+    """A driver as a stranger sees them: a name, and nothing to contact them by.
+
+    There is no phone field. That is the point - the rule is enforced by the
+    shape of the model rather than by remembering to delete a key, so no future
+    edit to User can leak a number into a response that should not carry one.
+    """
 
     id: UUID
     full_name: str
+
+
+class RideDriverContact(RideDriver):
+    """A driver as someone with a confirmed seat sees them.
+
+    CLAUDE.md: phone numbers are only revealed after a booking is confirmed.
+    Before that, a driver's number would be readable by anyone who can search.
+    """
+
+    phone: str
 
 
 class RideDetail(RideResponse):
     driver: RideDriver
     vehicle: VehicleResponse
     route_summary: str | None
+
+
+class RideDetailWithContact(RideDetail):
+    """The same ride, for a passenger who has booked it.
+
+    Only the driver field differs. Narrowing it in a subclass keeps the other
+    fourteen in one place, so the two responses cannot drift apart.
+    """
+
+    driver: RideDriverContact

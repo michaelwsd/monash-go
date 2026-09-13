@@ -61,6 +61,6 @@ def search(
 
 
 def get_ride(db: Client, ride_id: UUID) -> Ride | None:
-    res = db.table(TABLE).select("*").eq("ride_id", str(ride_id)).limit(1).execute()
+    res = db.table(TABLE).select("*").eq("id", str(ride_id)).limit(1).execute()
 
     return Ride.model_validate(res.data[0]) if res.data else None

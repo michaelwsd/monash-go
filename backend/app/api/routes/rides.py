@@ -6,7 +6,13 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUser, MapsDep, SupabaseDep
 from app.schemas.enums import Campus
-from app.schemas.ride import Ride, RideCreate, RideDetail, RideResponse
+from app.schemas.ride import (
+    Ride,
+    RideCreate,
+    RideDetail,
+    RideDetailWithContact,
+    RideResponse,
+)
 from app.services import ride_service
 
 router = APIRouter(prefix="/rides", tags=["rides"])
@@ -29,6 +35,12 @@ def search_rides(
 
 
 # frontend selects a ride and calls this in backend
-@router.get("/{ride_id}", response_model=RideDetail)
-def get_ride(_: CurrentUser, ride_id: UUID, db: SupabaseDep) -> RideDetail:
-    return ride_service.get_ride(db, ride_id=ride_id)
+# response_model is deliberately unset. It would coerce whatever the service
+# returns into one fixed shape, and coercing RideDetailWithContact down to
+# RideDetail is exactly the bug this endpoint must not have. The service picks
+# the model; FastAPI serialises the model it was handed.
+@router.get("/{ride_id}", response_model=None)
+def get_ride(
+    clerk_id: CurrentUser, ride_id: UUID, db: SupabaseDep
+) -> RideDetail | RideDetailWithContact:
+    return ride_service.get_ride(db, clerk_id=clerk_id, ride_id=ride_id)

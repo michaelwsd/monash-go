@@ -73,8 +73,15 @@ The schema lives in `backend/supabase/migrations/` as numbered SQL files and is 
 into git. It is a deliverable, not something that exists only in the Supabase console.
 
 There is no migration CLI wired up yet. To apply a migration, paste the file into the
-Supabase SQL editor and run it. Number new files sequentially (`0002_...sql`) and never
-edit one that has already been applied to the shared database. Write a new file instead.
+Supabase SQL editor and run it, in order. Number new files sequentially (`0004_...sql`)
+and never edit one that has already been applied to the shared database. Write a new
+file instead.
+
+`0003_book_seat.sql` holds functions rather than tables: `book_seat` and
+`cancel_booking`, called over RPC. Booking is the only place two users genuinely
+collide, and a `SELECT ... FOR UPDATE` inside a database transaction is the only thing
+that can serialise them - application code has a gap between reading the seat count and
+writing it, and two requests fit inside that gap.
 
 To populate the vehicle lookup table:
 
@@ -127,7 +134,7 @@ backend/
     └── fixtures/          recorded API responses, so no test calls Google
 ```
 
-Four rules that follow from the layering:
+Five rules that follow from the layering:
 
 1. **Routes never contain business logic.** Parse, call one service, return. If a route
    grows an `if` that is not about HTTP, it belongs in a service.
@@ -137,6 +144,10 @@ Four rules that follow from the layering:
    dict.
 4. **Constants appear exactly once**, in `core/constants.py`, with the citation inline.
    Never inline an emission factor or a fare in a service.
+5. **Where two requests can collide, the database decides.** Booking a seat is the only
+   such place today, and it lives in a Postgres function holding a row lock. Read-check-write
+   in a service has a gap between the read and the write, and no amount of careful Python
+   closes it - the two requests are separate transactions, possibly in separate workers.
 
 ---
 
@@ -198,8 +209,12 @@ npm run build                      # catches type errors the dev server tolerate
 
 The whole suite runs without a database or a network, which is the point. Tests marked
 `db` are excluded by `addopts` and need real Supabase credentials; run them deliberately
-with `uv run pytest -m db`. The 120-ride bulk test lives there, because a hundred rows in
-an in-memory dict proves nothing about Postgres.
+with `uv run pytest -m db`. Two files live there, and both are there for the same reason:
+a fake repository cannot reproduce what they test. The 120-ride bulk test needs real
+Postgres constraints, and the booking concurrency test needs real transactions - it fires
+ten simultaneous requests at a one-seat ride and asserts exactly one wins. Run those
+before a push. They are what caught a repository querying a column that does not exist,
+which no unit test could see.
 
 Being offline is also the limit: the tests cannot catch a mismatch between your Pydantic
 models and the real columns, so
@@ -220,9 +235,10 @@ Grab `$TOKEN` from the browser devtools on a signed-in frontend session.
 live route table rather than the plan: request and response shapes, field rules, status
 codes, and a list of what is specified but not yet built. Open it in a browser.
 
-Ten endpoints are live as of Sprint 3: user sync and profile, vehicle registration and the
-reference lookup, and the three rides endpoints. Bookings, the comparison dashboard,
-rewards and the pet shop are still ahead.
+Thirteen endpoints are live as of Sprint 4: user sync and profile, vehicle registration and
+the reference lookup, the three rides endpoints, and the three bookings endpoints. The
+marketplace is complete - what remains reads that data rather than adding to it: the
+comparison dashboard, the points a completed ride earns, and the pet those points feed.
 
 Three rules that catch people out:
 
@@ -233,6 +249,10 @@ Three rules that catch people out:
   value is a 422.
 - **Search dates are Melbourne dates, responses are UTC.** A 9am ride on the 10th comes
   back as `2026-09-09T23:00:00Z`. Format in `Australia/Melbourne` before displaying.
+- **The driver's phone appears only after a confirmed booking.** `GET /rides/{ride_id}`
+  omits the key entirely beforehand - absent, not null - and includes it once the caller
+  holds a seat. Two response models decide this, so a field added to the wrong one cannot
+  leak a number. Cancelling takes it away again.
 
 ---
 

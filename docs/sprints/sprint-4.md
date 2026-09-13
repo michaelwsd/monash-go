@@ -68,15 +68,71 @@ function below exists. That's expected — it's the target you're building towar
   leaking.") — don't reach for a manual `if` that strips the field ad hoc, use two distinct response
   schemas (with/without phone) and pick the right one based on booking status.
 
+**Sprint complete, 13/09/26.** 200 tests pass in the default run, seven more behind
+`uv run pytest -m db`, and the ten-way race has been run repeatedly without a flake.
+
+### Decisions taken while building
+
+**The SQL functions report failure by returning a word, not by raising.** `book_seat` and
+`cancel_booking` answer with a `booking_result` enum - `booked`, `ride_full`, `already_booked`,
+`ride_not_found`, `booking_not_found`. A `RAISE EXCEPTION` would reach the repository as a
+PostgREST error body that has to be pattern-matched to tell one failure from another; a returned
+value is a dict lookup. The repository stays a repository and the service keeps its monopoly on
+raising, which is the layering rule everywhere else in the codebase.
+
+**Both functions take the ride lock before the booking row.** The first draft of `cancel_booking`
+read the booking and then locked the ride, the opposite order from `book_seat`. Two functions
+taking the same two locks in opposite orders deadlock. Consistent ordering is the whole defence,
+and it is worth a comment in any function added here later.
+
+**Cancelling is idempotent, and rebooking revives.** A second cancel returns `cancelled` without
+handing back a second seat, and booking a ride you previously cancelled flips the existing row
+back to `confirmed` rather than colliding with `UNIQUE (ride_id, passenger_id)`.
+
+**The cancel path also flips `rides.status` back to `open`.** Easy to miss and silent when missed:
+a ride left at `full` with a free seat never appears in `GET /rides/search` again.
+
+**One `TestClient` per thread in the concurrency test.** `TestClient` drives the ASGI app through
+a single blocking portal, and ten threads pushing requests into one instance corrupt each other's
+transport - it fails with `RemoteProtocolError: Server disconnected` before any booking code runs.
+The client is built inside each thread, before the barrier, so it does not stagger the requests.
+
+**`GET /rides/{ride_id}` sets `response_model=None`.** The phone rule is enforced by which model
+the service builds - `RideDetail` has no phone field, `RideDetailWithContact` does. A declared
+`response_model` would coerce the second back into the first and strip the number, which is
+exactly the bug the endpoint must not have.
+
+### Bugs this sprint surfaced elsewhere
+
+`ride_repository.get_ride` queried `eq("ride_id", ...)` on the `rides` table, which has no such
+column - `GET /rides/{ride_id}` had been broken since Sprint 3. mypy cannot see it, because the
+column name is only a string, and every unit test fakes the repository. Only a query against real
+Postgres could find it, which is an argument for the `db`-marked tests.
+
 ## Definition of done
 
-- [ ] `test_booking_concurrency.py` passes repeatedly, not just once
-- [ ] `available_seats` never goes negative under deliberate concurrent abuse
-- [ ] `test_booking_service.py` and `test_bookings_endpoint.py` pass, including the cancel-then-
+- [x] `test_booking_concurrency.py` passes repeatedly, not just once
+- [x] `available_seats` never goes negative under deliberate concurrent abuse
+- [x] `test_booking_service.py` and `test_bookings_endpoint.py` pass, including the cancel-then-
       rebook round trip
-- [ ] Phone number confirmed absent pre-booking and present post-confirmation, via an actual
+- [x] Phone number confirmed absent pre-booking and present post-confirmation, via an actual
       response-shape assertion
-- [ ] REQ-003 acceptance criteria fully met (this sprint completes what Sprint 3 started)
+- [x] REQ-003 acceptance criteria fully met (this sprint completes what Sprint 3 started)
+
+## Carried into Sprint 5
+
+- **The migration is applied by hand.** `0003_book_seat.sql` was pasted into the Supabase SQL
+  editor. There is still no migration CLI, so a fresh database needs all three files run in order.
+- **Sprint 3's carried items are still open**: the pet stage thresholds have not been re-checked
+  against the real seeded distances, `ride_repository.get_ride` should be `get_by_id` to match the
+  other repositories, and `pandas` is still declared twice in `pyproject.toml`.
+- **`GET /bookings/me` returns bookings, not trips.** It carries a `ride_id` and no route, time or
+  driver, so a trips screen has to follow each booking to `GET /rides/{ride_id}`. If that proves
+  awkward for the frontend, a joined response belongs in Sprint 5 rather than being bolted on here.
+- **No `DELETE /vehicles/{id}`.** The frontend's My cars page has no way to remove a car.
+  `rides.vehicle_id` is `ON DELETE RESTRICT`, so a car that has ever carried a ride cannot be hard
+  deleted; a soft delete (`archived_at`, hidden from `GET /vehicles/me`) keeps ride history intact,
+  and ride history is what the emissions and points figures are built from.
 
 ## Explicitly not in this sprint
 

@@ -1,0 +1,39 @@
+# Render Blueprint for the FastAPI backend. Spec: https://render.com/docs/blueprint-spec
+# The frontend deploys separately on Vercel; only the API lives here.
+services:
+  - type: web
+    name: monashgo-api
+    runtime: python
+    region: singapore
+    plan: free
+    # Commits that only touch frontend/ do not trigger a redeploy
+    rootDir: backend
+    # Render adds uv to the runtime because backend/uv.lock exists.
+    # --frozen installs exactly the locked versions, --no-dev skips ruff/mypy/pytest.
+    buildCommand: uv sync --frozen --no-dev
+    # $PORT is assigned by Render at runtime
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Polled before traffic switches to a new deploy, so a broken build never replaces a working one
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.13
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: '["https://monashgo.vercel.app"]'
+      # sync: false means the value is entered in the Render dashboard, never committed
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: CLERK_PEM_PUBLIC_KEY
+        sync: false
+      - key: CLERK_ISSUER
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SERVO_SAVER_API_KEY
+        sync: false

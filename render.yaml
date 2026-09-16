@@ -11,8 +11,10 @@ services:
     # Render adds uv to the runtime because backend/uv.lock exists.
     # --frozen installs exactly the locked versions, --no-dev skips ruff/mypy/pytest.
     buildCommand: uv sync --frozen --no-dev
-    # $PORT is assigned by Render at runtime
-    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # $PORT is assigned by Render at runtime. --no-sync reuses the environment
+    # the build made; without it uv re-syncs on every boot, pulling in the dev
+    # group and adding ~30s to every cold start.
+    startCommand: uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT
     # Polled before traffic switches to a new deploy, so a broken build never replaces a working one
     healthCheckPath: /health
     envVars:

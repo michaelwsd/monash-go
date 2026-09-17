@@ -28,6 +28,8 @@ class VehicleCreate(BaseModel):
     year: int = Field(ge=1950, le=2100)
     fuel_type: FuelType
     fuel_consumption: float = Field(gt=0, le=100)
+    # Used to obtain canonical values at registration; never stored on vehicles.
+    reference_id: int | None = Field(default=None, gt=0, exclude=True)
 
 
 class VehicleResponse(VehicleCreate):

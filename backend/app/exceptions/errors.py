@@ -37,6 +37,12 @@ class PermissionDeniedError(DomainError):
     status_code = 403
 
 
+class InvalidInputError(DomainError):
+    """The request is well-formed but violates a domain rule."""
+
+    status_code = 422
+
+
 class InvalidCredentialsError(DomainError):
     """token is missing, malformed, expired, or not signed by Clerk"""
 

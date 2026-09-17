@@ -7,10 +7,12 @@ from uuid import UUID
 from postgrest.exceptions import APIError
 
 from app.exceptions.errors import ExternalServiceError
+from app.schemas.enums import FuelType
 from app.schemas.vehicle import VehicleCreate, VehicleReference, VehicleResponse
 from supabase import Client
 
 VEHICLES_TABLE = "vehicles"
+VEHICLE_REFERENCE_TABLE = "vehicle_reference"
 
 
 def _rows(data: object) -> list[Mapping[str, Any]]:
@@ -51,6 +53,31 @@ def list_reference_options(
         )
     )
     return [VehicleReference.model_validate(row) for row in _rows(res.data)]
+
+
+def get_reference_by_id(db: Client, *, reference_id: int) -> VehicleReference | None:
+    res = _execute(
+        db.table(VEHICLE_REFERENCE_TABLE).select("*").eq("id", reference_id).limit(1)
+    )
+    rows = _rows(res.data)
+    return VehicleReference.model_validate(rows[0]) if rows else None
+
+
+def find_exact_reference(
+    db: Client, *, make: str, model: str, year: int, fuel_type: FuelType
+) -> VehicleReference | None:
+    res = _execute(
+        db.table(VEHICLE_REFERENCE_TABLE)
+        .select("*")
+        .ilike("make", make)
+        .ilike("model", model)
+        .eq("year", year)
+        .eq("fuel_type", fuel_type)
+        # Manual entry has no engine size, so only canonicalize a unique match.
+        .limit(2)
+    )
+    rows = _rows(res.data)
+    return VehicleReference.model_validate(rows[0]) if len(rows) == 1 else None
 
 
 def list_for_owner(db: Client, *, owner_id: UUID) -> list[VehicleResponse]:

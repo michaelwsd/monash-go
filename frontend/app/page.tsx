@@ -177,8 +177,16 @@ export default function Home() {
     setMessage("");
     const selected = references.find((option) => option.id === Number(referenceId));
     const fuelType = manualEntry ? manualFuel : selected?.fuel_type;
+    const selectedReferenceId = manualEntry ? undefined : selected?.id;
 
-    if (!make || !model || !year || !consumption || !fuelType || (!manualEntry && !selected)) {
+    if (
+      !make ||
+      !model ||
+      !year ||
+      !consumption ||
+      !fuelType ||
+      (!manualEntry && selectedReferenceId === undefined)
+    ) {
       setError("Choose a reference vehicle, or complete the manual fields.");
       return;
     }
@@ -193,6 +201,7 @@ export default function Home() {
           year: Number(year),
           fuel_type: fuelType,
           fuel_consumption: Number(consumption),
+          ...(selectedReferenceId === undefined ? {} : { reference_id: selectedReferenceId }),
         }),
       });
       setVehicles((current) => [vehicle, ...current]);
@@ -224,9 +233,6 @@ export default function Home() {
           </a>
           <div className="flex items-center gap-4 text-sm">
             <span className="hidden text-[#d7e3cf] sm:inline">Vehicle setup</span>
-            <span className="rounded-full bg-[#91d845] px-3 py-1 text-xs font-semibold text-[#082719]">
-              Demo mode
-            </span>
           </div>
         </div>
       </header>
@@ -410,7 +416,11 @@ export default function Home() {
             ) : null}
 
             <Field
-              hint="Prefilled from the reference catalogue. You can correct it if needed."
+              hint={
+                manualEntry
+                  ? "Enter your vehicle's combined efficiency."
+                  : "Verified catalogue efficiency is used when you register."
+              }
               label={`Efficiency (${consumptionLabel(manualEntry ? manualFuel : selectedFuel)})`}
             >
               <input
@@ -419,6 +429,7 @@ export default function Home() {
                 min="0.1"
                 onChange={(event) => setConsumption(event.target.value)}
                 placeholder="e.g. 6.8"
+                readOnly={!manualEntry}
                 required
                 step="0.1"
                 type="number"

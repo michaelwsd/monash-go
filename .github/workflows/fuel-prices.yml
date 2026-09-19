@@ -1,0 +1,52 @@
+name: Fuel Prices
+
+on:
+  schedule:
+    # Once a day. Servo Saver publishes with a 24-hour delay, so the hour is
+    # not sensitive; this is 06:23 Melbourne in winter and 07:23 in summer.
+    # Off the hour for the same reason as the keep-alive: on-the-hour runs are
+    # the ones GitHub's scheduler delays or drops under load.
+    - cron: '23 20 * * *'
+  workflow_dispatch:
+
+# One fetch at a time. A stacked pair would write six rows for the day and
+# spend two of Servo Saver's ten requests a minute for nothing.
+concurrency:
+  group: fuel-prices
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      # Settings forbids unknown keys and requires every one of these, so the
+      # whole set is passed even though the script only touches Supabase and
+      # Servo Saver. A missing secret fails at import with a clear message
+      # rather than partway through a fetch.
+      - name: Fetch and store today's prices
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SERVO_SAVER_API_KEY: ${{ secrets.SERVO_SAVER_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          CLERK_PEM_PUBLIC_KEY: ${{ secrets.CLERK_PEM_PUBLIC_KEY }}
+          CLERK_ISSUER: ${{ secrets.CLERK_ISSUER }}
+          CORS_ORIGINS: '["https://monashgo.vercel.app"]'
+          ENVIRONMENT: production
+        run: uv run python -m scripts.fetch_fuel_prices

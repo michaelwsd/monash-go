@@ -63,3 +63,5 @@ PET_STAGE_THRESHOLDS: tuple[tuple[float, PetStage], ...] = (
 # day, which is the only thing that can surface a timetable revision or a
 # changed service.
 TRANSIT_CACHE_TTL = timedelta(days=1)
+
+SERVO_FUEL_CODES: dict[FuelType, str] = {"petrol": "U91", "diesel": "DSL", "hybrid": "U91"}

@@ -1,0 +1,537 @@
+{
+  "fuelPriceDetails": [
+    {
+      "fuelStation": {
+        "id": "IbTDNnbcZzuIc1x2U9DsSx3zoSMn9im4ze4nJSQTEa0=",
+        "name": "BP Bittern",
+        "address": "2320 Frankston-Flinders Road, BITTERN, 3918",
+        "brandId": "a03Ol00000NiMxTIAV",
+        "contactPhone": "0359839581",
+        "location": {
+          "latitude": -38.32836086,
+          "longitude": 145.18271084
+        },
+        "openingHours": {
+          "fri": {
+            "to": "21:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "mon": {
+            "to": "21:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "sat": {
+            "to": "21:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "sun": {
+            "to": "21:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "thu": {
+            "to": "21:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "tue": {
+            "to": "21:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "wed": {
+            "to": "21:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 215.9,
+          "updatedAt": "2026-09-14T21:34:22Z"
+        },
+        {
+          "fuelType": "P98",
+          "isAvailable": true,
+          "price": 235.9,
+          "updatedAt": "2026-09-14T21:34:22Z"
+        },
+        {
+          "fuelType": "DSL",
+          "isAvailable": true,
+          "price": 265.9,
+          "updatedAt": "2026-09-14T21:34:22Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T21:34:22Z"
+    },
+    {
+      "fuelStation": {
+        "id": "h1dA/eHNJ9PAwtqjqPq7RAH0E6WrMKhr3TiSLQ7waRM=",
+        "name": "Solo Wollert",
+        "address": "246 Epping Road, Wollert, 3750",
+        "brandId": "a03Ol00000PhFjoIAF",
+        "contactPhone": "0475555358",
+        "location": {
+          "latitude": -37.61613981,
+          "longitude": 145.0309371
+        },
+        "openingHours": {
+          "fri": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "mon": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sat": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sun": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "thu": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "tue": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "wed": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 207.5,
+          "updatedAt": "2026-09-14T21:45:58Z"
+        },
+        {
+          "fuelType": "P98",
+          "isAvailable": true,
+          "price": 229.5,
+          "updatedAt": "2026-09-14T21:45:59Z"
+        },
+        {
+          "fuelType": "DSL",
+          "isAvailable": true,
+          "price": 248.5,
+          "updatedAt": "2026-09-14T21:45:59Z"
+        },
+        {
+          "fuelType": "PDSL",
+          "isAvailable": true,
+          "price": 251.5,
+          "updatedAt": "2026-09-14T21:45:59Z"
+        },
+        {
+          "fuelType": "E10",
+          "isAvailable": true,
+          "price": 206.5,
+          "updatedAt": "2026-09-14T21:45:59Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T21:45:59Z"
+    },
+    {
+      "fuelStation": {
+        "id": "fR1fVJwJ+iymPp2MT6EEuc8hCGuCtq+srsL8BkLt9JY=",
+        "name": "Metro Brunswick West",
+        "address": "157 Union Street, BRUNSWICK WEST, 3055",
+        "brandId": "a03Ol00000NiMxvIAF",
+        "contactPhone": "0393873255",
+        "location": {
+          "latitude": -37.77301084,
+          "longitude": 144.94961294
+        },
+        "openingHours": {
+          "fri": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "mon": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "sat": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "sun": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "thu": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "tue": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          },
+          "wed": {
+            "to": "22:00",
+            "from": "06:00",
+            "state": "openPartialDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 205.5,
+          "updatedAt": "2026-09-14T23:33:52Z"
+        },
+        {
+          "fuelType": "P98",
+          "isAvailable": true,
+          "price": 228.9,
+          "updatedAt": "2026-09-14T23:33:52Z"
+        },
+        {
+          "fuelType": "DSL",
+          "isAvailable": true,
+          "price": 241.9,
+          "updatedAt": "2026-09-14T23:33:52Z"
+        },
+        {
+          "fuelType": "PDSL",
+          "isAvailable": false,
+          "price": null,
+          "updatedAt": "2026-09-14T23:33:52Z"
+        },
+        {
+          "fuelType": "E10",
+          "isAvailable": true,
+          "price": 204.5,
+          "updatedAt": "2026-09-14T23:33:52Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T23:33:52Z"
+    },
+    {
+      "fuelStation": {
+        "id": "Lzna97U4jjEpHTJAvor0QgljjJLCNyWO9R+JeivdQ60=",
+        "name": "Astron Epping",
+        "address": "1 Buch Ave, EPPING, 3076",
+        "brandId": "a03Ol00000NiMy3IAF",
+        "contactPhone": "0394131400",
+        "location": {
+          "latitude": -37.65996484,
+          "longitude": 145.02454094
+        },
+        "openingHours": {
+          "fri": {
+            "to": "22:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "mon": {
+            "to": "22:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "sat": {
+            "to": "22:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "sun": {
+            "to": "22:00",
+            "from": "05:30",
+            "state": "openPartialDay"
+          },
+          "thu": {
+            "to": "22:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "tue": {
+            "to": "22:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          },
+          "wed": {
+            "to": "22:00",
+            "from": "05:00",
+            "state": "openPartialDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 207.5,
+          "updatedAt": "2026-09-14T22:20:06Z"
+        },
+        {
+          "fuelType": "P98",
+          "isAvailable": true,
+          "price": 230.5,
+          "updatedAt": "2026-09-14T22:20:06Z"
+        },
+        {
+          "fuelType": "DSL",
+          "isAvailable": true,
+          "price": 249.9,
+          "updatedAt": "2026-09-14T21:40:12Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T22:20:06Z"
+    },
+    {
+      "fuelStation": {
+        "id": "sW4ZIaEtoaQviCRTJqgjZe+5U1gAz8o92udeHXQCw2Q=",
+        "name": "Endeavour Rhyll",
+        "address": "14 Beach Road, Rhyll, 3923",
+        "brandId": "a03Ol00000OuYHJIA3",
+        "contactPhone": "03 5682 1803",
+        "location": {
+          "latitude": -38.46521812,
+          "longitude": 145.30884865
+        },
+        "openingHours": {
+          "fri": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "mon": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sat": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sun": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "thu": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "tue": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "wed": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 215.9,
+          "updatedAt": "2026-09-14T20:00:00Z"
+        },
+        {
+          "fuelType": "P95",
+          "isAvailable": true,
+          "price": 233.9,
+          "updatedAt": "2026-09-14T20:00:00Z"
+        },
+        {
+          "fuelType": "DSL",
+          "isAvailable": true,
+          "price": 262.9,
+          "updatedAt": "2026-09-14T20:00:00Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T20:00:00Z"
+    },
+    {
+      "fuelStation": {
+        "id": "MJ1KOC70nBRKK3QPH+26+QN4P+e3vGfxHEaic/Q14T0=",
+        "name": "OTR HORSHAM WILSON STREET",
+        "address": "95 Wilson ST, HORSHAM, 3400",
+        "brandId": "a03Ol00000O13SjIAJ",
+        "contactPhone": "61383883751",
+        "location": {
+          "latitude": -36.71666246530237,
+          "longitude": 142.19652029500293
+        },
+        "openingHours": {
+          "fri": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "mon": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sat": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sun": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "thu": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "tue": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "wed": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 225.9,
+          "updatedAt": "2026-09-14T20:50:25Z"
+        },
+        {
+          "fuelType": "P95",
+          "isAvailable": true,
+          "price": 243.4,
+          "updatedAt": "2026-09-14T20:50:25Z"
+        },
+        {
+          "fuelType": "P98",
+          "isAvailable": true,
+          "price": 252.9,
+          "updatedAt": "2026-09-14T20:50:25Z"
+        },
+        {
+          "fuelType": "PDSL",
+          "isAvailable": true,
+          "price": 269.8,
+          "updatedAt": "2026-09-14T20:50:25Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T20:50:25Z"
+    },
+    {
+      "fuelStation": {
+        "id": "LXCBNLEwFmuKlGM2+mMOjjS3VZ6z1DFHiydPGxQSl1I=",
+        "name": "OTR IRYMPLE",
+        "address": "2090 Fifteenth ST, IRYMPLE, 3498",
+        "brandId": "a03Ol00000O13SjIAJ",
+        "contactPhone": "61383883873",
+        "location": {
+          "latitude": -34.23120533,
+          "longitude": 142.16532418
+        },
+        "openingHours": {
+          "fri": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "mon": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sat": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "sun": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "thu": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "tue": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          },
+          "wed": {
+            "to": "00:00",
+            "from": "00:00",
+            "state": "openAllDay"
+          }
+        }
+      },
+      "fuelPrices": [
+        {
+          "fuelType": "U91",
+          "isAvailable": true,
+          "price": 223.9,
+          "updatedAt": "2026-09-14T20:20:26Z"
+        },
+        {
+          "fuelType": "P95",
+          "isAvailable": true,
+          "price": 241.4,
+          "updatedAt": "2026-09-14T20:20:26Z"
+        },
+        {
+          "fuelType": "P98",
+          "isAvailable": true,
+          "price": 250.9,
+          "updatedAt": "2026-09-14T20:20:26Z"
+        },
+        {
+          "fuelType": "PDSL",
+          "isAvailable": true,
+          "price": 268.9,
+          "updatedAt": "2026-09-14T20:20:26Z"
+        }
+      ],
+      "updatedAt": "2026-09-14T20:20:26Z"
+    }
+  ]
+}

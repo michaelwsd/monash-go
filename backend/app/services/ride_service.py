@@ -20,6 +20,7 @@ from app.schemas.ride import (
     RideDetailWithContact,
     RideDriver,
     RideDriverContact,
+    RidePassenger,
 )
 from app.schemas.vehicle import VehicleResponse
 from app.services import route_service
@@ -125,3 +126,39 @@ def get_ride(db: Client, *, clerk_id: str, ride_id: UUID) -> RideDetail:
         )
 
     return RideDetail(**shared, driver=RideDriver(id=owner.id, full_name=owner.full_name))
+
+
+def list_passengers(db: Client, *, clerk_id: str, ride_id: UUID) -> list[RidePassenger]:
+    """Who has a seat on this ride, with their numbers. Drivers only.
+
+    The check is ownership, not just "a real ride": a passenger asking for the
+    list would be handed every other passenger's phone number, which is exactly
+    the leak the booking-reveals-the-number rule exists to prevent.
+    """
+    caller = user_repository.get_by_clerk_id(db, clerk_id)
+    if not caller:
+        raise NotFoundError("user not found")
+
+    ride = ride_repository.get_ride(db, ride_id)
+    if not ride:
+        raise NotFoundError("ride not found")
+
+    if ride.driver_id != caller.id:
+        raise PermissionDeniedError("only the driver can see who is booked")
+
+    passengers: list[RidePassenger] = []
+    for booking in booking_repository.list_confirmed_for_ride(db, ride_id=ride.id):
+        passenger = user_repository.get_by_id(db, booking.passenger_id)
+        if passenger is None:
+            # a booking whose passenger row is gone is a broken foreign key,
+            # not a person to show; skip rather than 500 the whole list
+            continue
+        passengers.append(
+            RidePassenger(
+                id=passenger.id,
+                full_name=passenger.full_name,
+                phone=passenger.phone,
+                booking_id=booking.id,
+            )
+        )
+    return passengers

@@ -328,11 +328,11 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Fifteen are callable; the five at the bottom are
+      running route table rather than the plan. Sixteen are callable; the five at the bottom are
       specified but not built, and calling one returns a 404 from the router, not from your code.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>15 live endpoints</span>
+      <span>16 live endpoints</span>
       <span>generated 20 Sep 2026</span>
     </div>
   </header>
@@ -369,7 +369,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The fifteen</div>
+    <div class="eyebrow">The sixteen</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -383,6 +383,7 @@ Content-Type: application/json</pre>
       <a href="#rides-search"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/search</span><span class="iwhat">find rides with seats left on a given day</span></a>
       <a href="#rides-mine"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/mine</span><span class="iwhat">the caller's own posted drives</span></a>
       <a href="#rides-detail"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/{ride_id}</span><span class="iwhat">one ride, with its driver, car and route</span></a>
+      <a href="#rides-passengers"><span class="verb v-get">get</span><span class="ipath">/api/v1/rides/{ride_id}/passengers</span><span class="iwhat">who is booked, with numbers - drivers only</span></a>
       <a href="#bookings-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/bookings</span><span class="iwhat">claim a seat, atomically</span></a>
       <a href="#bookings-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/bookings/me</span><span class="iwhat">the caller's bookings</span></a>
       <a href="#bookings-cancel"><span class="verb v-delete">del</span><span class="ipath">/api/v1/bookings/{booking_id}</span><span class="iwhat">give the seat back</span></a>
@@ -973,6 +974,50 @@ Authorization: Bearer &lt;clerk_jwt&gt;
           arrives with <code>GET /compare/{ride_id}</code>.</div>
       </div>
     </article>
+
+    <article class="endpoint" id="rides-passengers">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/rides/{ride_id}/passengers</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Everyone with a confirmed seat on the ride, in the order they booked, with their phone
+          numbers. <strong>The driver only.</strong> This is the phone rule in the other direction:
+          a booking reveals a number both ways, and the person doing the pick-up needs to be able
+          to call.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/rides/7c04a1b2-…/passengers</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  {
+    <span class="k">"id"</span>: "b2e1…",
+    <span class="k">"full_name"</span>: "Pat Passenger",
+    <span class="k">"phone"</span>: "0411222333",
+    <span class="k">"booking_id"</span>: "9f30…"
+  }
+]</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">403</td><td>The caller is not this ride's driver. A 403 rather than a 404: the ride itself is real and viewable, the list is not theirs</td></tr>
+              <tr><td class="num">404</td><td>No such ride</td></tr>
+              <tr><td class="num">422</td><td>The path segment is not a UUID</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Cancelled bookings are not passengers.</strong> Only
+          <code>status: "confirmed"</code> rows are listed. An empty array is a ride nobody has
+          booked, not an error.</div>
+      </div>
+    </article>
   </section>
 
 
@@ -1158,7 +1203,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
           <table>
             <thead><tr><th>Field</th><th>Means</th></tr></thead>
             <tbody>
-              <tr><td class="name">riders</td><td>Confirmed bookings plus the caller, unless they already hold a seat. The carpool row is priced for this many</td></tr>
+              <tr><td class="name">riders</td><td>Confirmed bookings plus the caller, unless they already hold a seat or are the driver. The carpool row is priced for this many, so a driver and their booked passenger see the same figures</td></tr>
               <tr><td class="name">is_concession</td><td>Which myki fare the transit row used: $2.85 concession, $5.70 full</td></tr>
               <tr><td class="name">fuel_price</td><td>Dollars per litre, today's statewide median from Servo Saver. <code>null</code> for an electric car, which is costed on a fixed electricity price instead</td></tr>
               <tr><td class="name">modes[].cost</td><td>Dollars. Carpool is per passenger; private is the whole tank</td></tr>
@@ -1268,7 +1313,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
   </section>
 
   <footer>
-    <p>Read off the live route table on 13 September 2026, with Sprint 5's comparison dashboard landed. If this
+    <p>Read off the live route table on 13 September 2026, with Sprint 5's comparison dashboard landed and <code>GET /rides/{ride_id}/passengers</code> added for the driver's view. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

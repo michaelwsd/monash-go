@@ -285,6 +285,50 @@ def test_a_viewer_who_already_holds_a_seat_is_not_counted_twice(
     assert compare(row).riders == 2
 
 
+def test_the_driver_sees_the_ride_as_it_is(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The driver never holds a booking, so the "plus one for the viewer"
+    rule would hand them a phantom passenger and a different figure from the
+    one their real passenger sees. One booked: both see one rider."""
+    driver = VIEWER.model_copy(update={"id": DRIVER_ID, "clerk_id": "user_driver"})
+    row, _ = install(monkeypatch, confirmed=1, viewer=driver)
+
+    as_driver = compare_service.compare(DB, HTTP, clerk_id="user_driver", ride_id=row.id)
+
+    assert as_driver.riders == 1
+    assert mode(as_driver, "carpool").co2_kg == pytest.approx(2.952 / 2, abs=1e-3)
+
+
+def test_the_driver_and_a_booked_passenger_see_identical_figures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The two screenshots that found the bug: same drive, same booked seat,
+    two different numbers. They must agree."""
+    row, _ = install(monkeypatch, confirmed=1, viewer_booked=True)
+    driver = VIEWER.model_copy(update={"id": DRIVER_ID, "clerk_id": "user_driver"})
+    # one install, so both look at the same ride; the user fake resolves both
+    monkeypatch.setattr(
+        FakeUserRepo,
+        "get_by_clerk_id",
+        lambda self, db, clerk_id: driver if clerk_id == "user_driver" else VIEWER,
+    )
+
+    as_passenger = compare(row)
+    as_driver = compare_service.compare(DB, HTTP, clerk_id="user_driver", ride_id=row.id)
+
+    assert as_driver.riders == as_passenger.riders == 1
+    assert mode(as_driver, "carpool").cost == mode(as_passenger, "carpool").cost
+    assert mode(as_driver, "carpool").co2_kg == mode(as_passenger, "carpool").co2_kg
+
+
+def test_a_driver_with_no_bookings_still_sees_one_rider(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nobody booked yet: the figures are for the first passenger, which is
+    the only useful thing to show. Never a division by zero."""
+    driver = VIEWER.model_copy(update={"id": DRIVER_ID, "clerk_id": "user_driver"})
+    row, _ = install(monkeypatch, confirmed=0, viewer=driver)
+
+    assert compare_service.compare(DB, HTTP, clerk_id="user_driver", ride_id=row.id).riders == 1
+
+
 # --- transit -------------------------------------------------------------
 
 

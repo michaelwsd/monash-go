@@ -206,6 +206,30 @@ async function main(): Promise<void> {
   check("phone is present after booking", detail.driver.phone === "0412345678");
   check("seat count dropped", detail.available_seats === 0);
 
+  step("the comparison, now the rider holds a seat");
+  const comparison = await api.getComparison(ride.id, { token: rider.token });
+  check("three modes, in order", comparison.modes.map((m) => m.mode).join(",") === "carpool,transit,private");
+  check(
+    "every row has the four fields",
+    comparison.modes.every((m) => ["duration_min", "cost", "co2_kg"].every((k) => typeof (m as unknown as Record<string, unknown>)[k] === "number")),
+  );
+  check("the booked rider is counted once, not as +1", comparison.riders === 1);
+  check("a petrol car carries a fuel price", typeof comparison.fuel_price === "number" && comparison.fuel_price > 0);
+  check("the transit journey has legs to draw", (comparison.transit_legs?.length ?? 0) > 0);
+  const [carpool, , alone] = comparison.modes;
+  check("a carpool seat emits less than driving alone", carpool.co2_kg < alone.co2_kg);
+
+  step("the driver sees who is booked");
+  const passengers = await api.getRidePassengers(ride.id, { token: driver.token });
+  check("the rider is listed with their number", passengers.length === 1 && passengers[0].full_name === "E2E Rider");
+  let peekError: unknown = null;
+  try {
+    await api.getRidePassengers(ride.id, { token: rider.token });
+  } catch (caught) {
+    peekError = caught;
+  }
+  check("a passenger asking for the list is a 403", peekError instanceof api.ApiError && peekError.status === 403);
+
   step("rider's bookings");
   const bookings = await api.getMyBookings({ token: rider.token });
   check("the booking is listed", bookings.some((b) => b.id === booking.id && b.status === "confirmed"));

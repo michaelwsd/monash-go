@@ -68,7 +68,7 @@ same origin must appear in the backend's `CORS_ORIGINS` or every request is bloc
 browser.
 
 Pages under `app/(app)/` are the signed-in app - home, find a ride, post a drive, ride
-detail, my trips, my drives, my cars, profile. They share `components/app-shell.tsx` for the frame,
+detail (with the three-mode comparison, Requirement 4), my trips, my drives, my cars, profile. They share `components/app-shell.tsx` for the frame,
 `lib/use-query.ts` for fetching, and `lib/time.ts` for every date, which is always a
 Melbourne date. `lib/api.ts` is the only file that talks to the backend.
 
@@ -259,8 +259,8 @@ Grab `$TOKEN` from the browser devtools on a signed-in frontend session.
 live route table rather than the plan: request and response shapes, field rules, status
 codes, and a list of what is specified but not yet built. Open it in a browser.
 
-Fifteen endpoints are live as of Sprint 5: user sync and profile, vehicle registration and
-the reference lookup, the four rides endpoints, the three bookings endpoints, and the comparison. What remains is
+Sixteen endpoints are live as of Sprint 5: user sync and profile, vehicle registration and
+the reference lookup, the five rides endpoints, the three bookings endpoints, and the comparison. What remains is
 Sprint 6: the points a completed ride earns, the pet those points feed, and the shop.
 
 Three rules that catch people out:
@@ -272,10 +272,11 @@ Three rules that catch people out:
   value is a 422.
 - **Search dates are Melbourne dates, responses are UTC.** A 9am ride on the 10th comes
   back as `2026-09-09T23:00:00Z`. Format in `Australia/Melbourne` before displaying.
-- **The driver's phone appears only after a confirmed booking.** `GET /rides/{ride_id}`
-  omits the key entirely beforehand - absent, not null - and includes it once the caller
-  holds a seat. Two response models decide this, so a field added to the wrong one cannot
-  leak a number. Cancelling takes it away again.
+- **Phone numbers follow bookings, in both directions.** `GET /rides/{ride_id}` omits the
+  driver's `phone` key entirely until the caller holds a seat - absent, not null - and
+  `GET /rides/{ride_id}/passengers` hands the driver their passengers' numbers and nobody
+  else's (403). Two response models decide the first, an ownership check the second.
+  Cancelling takes the number away again on both sides.
 
 ---
 

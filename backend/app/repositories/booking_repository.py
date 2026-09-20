@@ -74,3 +74,16 @@ def count_confirmed(db: Client, *, ride_id: UUID) -> int:
     ).count
 
     return count or 0
+
+
+def list_confirmed_for_ride(db: Client, *, ride_id: UUID) -> list[Booking]:
+    """Every live booking on a ride, in the order the seats were taken."""
+    res = (
+        db.table(TABLE)
+        .select("*")
+        .eq("ride_id", str(ride_id))
+        .eq("status", "confirmed")
+        .order("created_at")
+        .execute()
+    )
+    return [Booking.model_validate(row) for row in res.data]

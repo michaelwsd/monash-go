@@ -291,6 +291,23 @@ export function searchRides(
   return apiFetch<Ride[]>(`/rides/search?${params.toString()}`, options);
 }
 
+/**
+ * backend/app/schemas/ride.py :: RidePassenger. A confirmed passenger as the
+ * driver sees them - the mirror of the driver's phone appearing to a booked
+ * passenger. Only the driver is ever given this; anyone else gets a 403.
+ */
+export interface RidePassenger {
+  id: string;
+  full_name: string;
+  phone: string;
+  booking_id: string;
+}
+
+/** GET /rides/{id}/passengers - drivers only. */
+export function getRidePassengers(rideId: string, options: ApiOptions): Promise<RidePassenger[]> {
+  return apiFetch<RidePassenger[]>(`/rides/${rideId}/passengers`, options);
+}
+
 /** GET /rides/mine - the caller's own posted rides, soonest departure first, any status. */
 export function getMyRides(options: ApiOptions): Promise<Ride[]> {
   return apiFetch<Ride[]>("/rides/mine", options);
@@ -343,4 +360,52 @@ export function cancelBooking(bookingId: string, options: ApiOptions): Promise<B
 /** GET /bookings/me - newest first, cancelled ones included. */
 export function getMyBookings(options: ApiOptions): Promise<Booking[]> {
   return apiFetch<Booking[]>("/bookings/me", options);
+}
+
+export type TransitMode = "train" | "bus" | "tram" | "walk";
+
+/** backend/app/schemas/route.py :: TransitLeg. One step of the public transport journey. */
+export interface TransitLeg {
+  mode: TransitMode;
+  distance_km: number;
+  duration_min: number;
+  /** The service, e.g. "691" or "Cranbourne". Null for a walk. */
+  line: string | null;
+}
+
+export type CompareMode = "carpool" | "transit" | "private";
+
+/** backend/app/schemas/compare.py :: ModeComparison. One row of the table. */
+export interface ModeComparison {
+  mode: CompareMode;
+  duration_min: number;
+  /** Dollars. Per person for carpool and transit; the whole tank for private. */
+  cost: number;
+  /** Per occupant for carpool; the sum over legs for transit. */
+  co2_kg: number;
+}
+
+/**
+ * backend/app/schemas/compare.py :: Comparison. The same trip three ways, plus
+ * the inputs it was computed from, so the screen can say why two comparisons
+ * differ. Modes always arrive as carpool, transit, private.
+ */
+export interface Comparison {
+  ride_id: string;
+  /** Confirmed bookings plus the caller, unless they already hold a seat. */
+  riders: number;
+  is_concession: boolean;
+  /** Dollars per litre, today's median. Null for an electric car. */
+  fuel_price: number | null;
+  modes: ModeComparison[];
+  transit_legs: TransitLeg[] | null;
+}
+
+/**
+ * GET /compare/{ride_id}. A 404 also means "no fuel price on record yet" -
+ * the daily job has not run - which the page treats as unavailable, not as
+ * a broken ride.
+ */
+export function getComparison(rideId: string, options: ApiOptions): Promise<Comparison> {
+  return apiFetch<Comparison>(`/compare/${rideId}`, options);
 }

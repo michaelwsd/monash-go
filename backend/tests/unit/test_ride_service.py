@@ -14,6 +14,7 @@ import httpx
 import pytest
 
 from app.exceptions.errors import InvalidInputError, NotFoundError, PermissionDeniedError
+from app.schemas.booking import Booking
 from app.schemas.enums import Campus, TravelMode
 from app.schemas.ride import Ride, RideCreate
 from app.schemas.route import CampusRoute
@@ -69,9 +70,30 @@ def payload(vehicle_id: UUID, **overrides: Any) -> RideCreate:
     return RideCreate(**fields)
 
 
+PASSENGER = OWNER.model_copy(
+    update={
+        "id": uuid4(),
+        "clerk_id": "user_pass",
+        "full_name": "Pat Passenger",
+        "phone": "0411222333",
+    }
+)
+
+
 class FakeUserRepo:
     def get_by_clerk_id(self, db: object, clerk_id: str) -> User | None:
-        return OWNER if clerk_id == OWNER.clerk_id else None
+        return next((u for u in (OWNER, PASSENGER) if u.clerk_id == clerk_id), None)
+
+    def get_by_id(self, db: object, user_id: UUID) -> User | None:
+        return next((u for u in (OWNER, PASSENGER) if u.id == user_id), None)
+
+
+class FakeBookingRepo:
+    def __init__(self, rows: list[Booking] | None = None) -> None:
+        self.rows = rows or []
+
+    def list_confirmed_for_ride(self, db: object, *, ride_id: UUID) -> list[Booking]:
+        return [b for b in self.rows if b.ride_id == ride_id and b.status == "confirmed"]
 
 
 class FakeVehicleRepo:
@@ -108,6 +130,9 @@ class FakeRideRepo:
     def list_for_driver(self, db: object, *, driver_id: UUID) -> list[Ride]:
         self.filters = None
         return [ride for ride in self.rows if ride.driver_id == driver_id]
+
+    def get_ride(self, db: object, ride_id: UUID) -> Ride | None:
+        return next((ride for ride in self.rows if ride.id == ride_id), None)
 
     def insert(self, db: object, **fields: Any) -> Ride:
         ride = Ride(
@@ -163,6 +188,7 @@ def install(
     monkeypatch.setattr(ride_service, "vehicle_repository", FakeVehicleRepo(car))
     monkeypatch.setattr(ride_service, "ride_repository", rides)
     monkeypatch.setattr(ride_service, "route_service", routes)
+    monkeypatch.setattr(ride_service, "booking_repository", FakeBookingRepo())
     return rides, routes
 
 
@@ -370,3 +396,66 @@ def test_my_rides_for_an_unknown_caller_is_a_not_found(monkeypatch: pytest.Monke
 
     with pytest.raises(NotFoundError):
         ride_service.list_for_driver(DB, clerk_id="user_nobody")
+
+
+# --- passengers ----------------------------------------------------------
+
+
+def booked(ride_id: UUID, passenger_id: UUID, status: str = "confirmed") -> Booking:
+    return Booking(
+        id=uuid4(),
+        ride_id=ride_id,
+        passenger_id=passenger_id,
+        status=cast(Any, status),
+        created_at=datetime.now(UTC),
+    )
+
+
+def test_the_driver_sees_their_passengers_with_numbers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The mirror of the phone rule: a booking reveals a number in both
+    directions, and the driver needs to be able to call the person they are
+    picking up."""
+    car = vehicle()
+    rides, _ = install(monkeypatch, car=car)
+    mine = ride_service.create(DB, HTTP, clerk_id=OWNER.clerk_id, payload=payload(car.id))
+    monkeypatch.setattr(
+        ride_service, "booking_repository", FakeBookingRepo([booked(mine.id, PASSENGER.id)])
+    )
+
+    listed = ride_service.list_passengers(DB, clerk_id=OWNER.clerk_id, ride_id=mine.id)
+
+    assert [(p.full_name, p.phone) for p in listed] == [("Pat Passenger", "0411222333")]
+
+
+def test_a_passenger_cannot_list_the_other_passengers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Anyone but the driver asking would be handed every other passenger's
+    phone number - exactly the leak the booking rule exists to stop."""
+    car = vehicle()
+    _, _ = install(monkeypatch, car=car)
+    mine = ride_service.create(DB, HTTP, clerk_id=OWNER.clerk_id, payload=payload(car.id))
+    monkeypatch.setattr(
+        ride_service, "booking_repository", FakeBookingRepo([booked(mine.id, PASSENGER.id)])
+    )
+
+    with pytest.raises(PermissionDeniedError):
+        ride_service.list_passengers(DB, clerk_id=PASSENGER.clerk_id, ride_id=mine.id)
+
+
+def test_a_cancelled_booking_is_not_a_passenger(monkeypatch: pytest.MonkeyPatch) -> None:
+    car = vehicle()
+    _, _ = install(monkeypatch, car=car)
+    mine = ride_service.create(DB, HTTP, clerk_id=OWNER.clerk_id, payload=payload(car.id))
+    monkeypatch.setattr(
+        ride_service,
+        "booking_repository",
+        FakeBookingRepo([booked(mine.id, PASSENGER.id, status="cancelled")]),
+    )
+
+    assert ride_service.list_passengers(DB, clerk_id=OWNER.clerk_id, ride_id=mine.id) == []
+
+
+def test_passengers_of_a_missing_ride_is_a_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    install(monkeypatch, car=vehicle())
+
+    with pytest.raises(NotFoundError):
+        ride_service.list_passengers(DB, clerk_id=OWNER.clerk_id, ride_id=uuid4())

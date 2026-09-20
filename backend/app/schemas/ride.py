@@ -100,3 +100,17 @@ class RideDetailWithContact(RideDetail):
     """
 
     driver: RideDriverContact
+
+
+class RidePassenger(BaseModel):
+    """A confirmed passenger, as the ride's driver sees them.
+
+    The mirror of RideDriverContact: a booking is the thing that reveals a
+    number in either direction. Only the driver is ever handed this model -
+    the route refuses anyone else - so the phone is unconditional here.
+    """
+
+    id: UUID
+    full_name: str
+    phone: str
+    booking_id: UUID

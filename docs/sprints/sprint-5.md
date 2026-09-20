@@ -67,7 +67,10 @@ hand-verified — don't invent new fixtures here, cross-check against the same s
 **Then implement:**
 - `app/api/routes/compare.py` — `GET /compare/{ride_id}`.
 
-**Sprint complete, 20/09/26.** 249 tests pass in the default run. `GET /compare/{ride_id}` is
+**Sprint complete, 20/09/26.** 249 tests pass in the default run. The comparison panel landed on
+the frontend's ride page the same day (`frontend/components/comparison-panel.tsx`, artboard 1g).
+The driver sees it too, titled "What riders see": `riders = confirmed + 1` is exactly the next
+rider's view, which is artboard 1h's post-a-drive preview. `GET /compare/{ride_id}` is
 live, the fuel job has run against the real database, and the workflow is written and waiting for
 one manual run after the push.
 
@@ -93,9 +96,13 @@ cannot call Servo Saver because it is never handed a client. `test_fuel_service.
 path an `ExplodingClient` whose every attribute access raises, and the read tests assert the
 client module was never called. Servo Saver allows ten requests a minute.
 
-**The comparison is for a prospective passenger.** `riders = confirmed bookings + 1`, unless the
-caller already holds a seat, in which case they are already counted. A ride nobody has booked
-compares for one rider rather than dividing by zero. This needed `booking_repository.count_confirmed`,
+**The comparison is for a prospective passenger, unless the viewer is the driver.** `riders =
+confirmed bookings + 1` for someone deciding whether to book; `confirmed` for someone who already
+has, since they are in the count. The driver never holds a booking, so without a branch of their
+own the `+1` handed them a phantom passenger - one seat taken, and the driver saw a three-way split
+while their passenger saw a two-way one. Found from two screenshots of the same drive on 20/09/26;
+the driver now sees `max(confirmed, 1)`, and a test pins that driver and booked passenger agree.
+A ride nobody has booked compares for one rider rather than dividing by zero. This needed `booking_repository.count_confirmed`,
 which uses PostgREST's `count=exact` rather than fetching rows to count them.
 
 **Two denominators, deliberately.** Carpool cost divides among passengers (the driver was paying
@@ -127,8 +134,10 @@ legitimately get different numbers, and the screen has to be able to say why.
 - **The fuel workflow needs one manual run.** `.github/workflows/fuel-prices.yml` is written and
   the seven secrets it needs already exist for CI, but it has not run on GitHub yet. Trigger it from
   the Actions tab after the push and check the log shows three `201 Created` lines.
-- **No frontend yet for the comparison.** The endpoint is live; the dashboard in artboard 1g is
-  the frontend's next piece.
+- **`GET /rides/{ride_id}/passengers` was added on 20/09/26** so a driver can see who has booked
+  and call them: repository `list_confirmed_for_ride`, service `list_passengers` (403 for anyone but
+  the driver), route, tests at both layers and in the frontend's `e2e:api` flow. It is the phone
+  rule's mirror; `CLAUDE.md` should say so alongside "phone numbers only revealed after booking".
 - **Still open from earlier sprints**: the pet stage thresholds against real distances,
   `ride_repository.get_ride` should be `get_by_id`, `DELETE /vehicles/{id}`, and the duplicated
   `pandas` in `pyproject.toml`.

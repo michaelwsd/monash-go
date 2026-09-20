@@ -11,6 +11,7 @@ from app.schemas.ride import (
     RideCreate,
     RideDetail,
     RideDetailWithContact,
+    RidePassenger,
     RideResponse,
 )
 from app.services import ride_service
@@ -49,3 +50,8 @@ def get_ride(
     clerk_id: CurrentUser, ride_id: UUID, db: SupabaseDep
 ) -> RideDetail | RideDetailWithContact:
     return ride_service.get_ride(db, clerk_id=clerk_id, ride_id=ride_id)
+
+
+@router.get("/{ride_id}/passengers", response_model=list[RidePassenger])
+def ride_passengers(clerk_id: CurrentUser, ride_id: UUID, db: SupabaseDep) -> list[RidePassenger]:
+    return ride_service.list_passengers(db, clerk_id=clerk_id, ride_id=ride_id)

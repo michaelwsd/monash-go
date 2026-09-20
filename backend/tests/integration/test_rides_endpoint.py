@@ -92,12 +92,22 @@ def body(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
+PASSENGER = OWNER.model_copy(
+    update={
+        "id": uuid4(),
+        "clerk_id": "user_passenger",
+        "full_name": "Pat Passenger",
+        "phone": "0411222333",
+    }
+)
+
+
 class FakeUserRepo:
     def get_by_clerk_id(self, db: object, clerk_id: str) -> User | None:
-        return OWNER if clerk_id == CLERK_ID else None
+        return next((u for u in (OWNER, PASSENGER) if u.clerk_id == clerk_id), None)
 
     def get_by_id(self, db: object, user_id: UUID) -> User | None:
-        return OWNER if user_id == OWNER.id else None
+        return next((u for u in (OWNER, PASSENGER) if u.id == user_id), None)
 
 
 class FakeVehicleRepo:
@@ -184,6 +194,19 @@ class FakeBookingRepo:
 
     def __init__(self) -> None:
         self.has_confirmed_seat = False
+
+    def list_confirmed_for_ride(self, db: object, *, ride_id: UUID) -> list[Booking]:
+        if not self.has_confirmed_seat:
+            return []
+        return [
+            Booking(
+                id=uuid4(),
+                ride_id=ride_id,
+                passenger_id=PASSENGER.id,
+                status="confirmed",
+                created_at=datetime.now(UTC),
+            )
+        ]
 
     def get_confirmed(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
         if not self.has_confirmed_seat:
@@ -889,3 +912,69 @@ def test_my_rides_without_a_token_is_401(
     client, _, _, _ = wired
 
     assert client.get(f"{RIDES_URL}/mine").status_code == 401
+
+
+# --- GET /rides/{ride_id}/passengers -------------------------------------
+
+
+def test_the_driver_gets_their_passengers_with_phone_numbers(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    """The mirror of the phone rule: a booking reveals a number in both
+    directions, and the driver has to be able to call the person they are
+    picking up."""
+    client, _, _, bookings = wired
+    token = make_token(sub=CLERK_ID)
+    created = post_a_ride(client, token)
+    bookings.has_confirmed_seat = True
+
+    response = client.get(f"{RIDES_URL}/{created['id']}/passengers", headers=auth(token))
+
+    assert response.status_code == 200
+    [passenger] = response.json()
+    assert passenger["full_name"] == "Pat Passenger"
+    assert passenger["phone"] == "0411222333"
+    assert passenger["id"] == str(PASSENGER.id)
+
+
+def test_anyone_but_the_driver_is_403_and_sees_no_numbers(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    """A 403, not a 404: the ride is real and viewable, the list is not
+    theirs. And the refusal body must not carry what was refused."""
+    client, _, _, bookings = wired
+    created = post_a_ride(client, make_token(sub=CLERK_ID))
+    bookings.has_confirmed_seat = True
+
+    response = client.get(
+        f"{RIDES_URL}/{created['id']}/passengers",
+        headers=auth(make_token(sub=PASSENGER.clerk_id)),
+    )
+
+    assert response.status_code == 403
+    assert "0411222333" not in response.text
+
+
+def test_a_ride_with_no_bookings_has_no_passengers(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    client, _, _, _ = wired
+    token = make_token(sub=CLERK_ID)
+    created = post_a_ride(client, token)
+
+    response = client.get(f"{RIDES_URL}/{created['id']}/passengers", headers=auth(token))
+
+    assert response.json() == []
+
+
+def test_passengers_without_a_token_is_401(
+    wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
+    make_token: Callable[..., str],
+) -> None:
+    client, _, _, _ = wired
+    created = post_a_ride(client, make_token(sub=CLERK_ID))
+
+    assert client.get(f"{RIDES_URL}/{created['id']}/passengers").status_code == 401

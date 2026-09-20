@@ -328,12 +328,12 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Fourteen are callable; the six at the bottom are
+      running route table rather than the plan. Fifteen are callable; the five at the bottom are
       specified but not built, and calling one returns a 404 from the router, not from your code.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>14 live endpoints</span>
-      <span>generated 13 Sep 2026</span>
+      <span>15 live endpoints</span>
+      <span>generated 20 Sep 2026</span>
     </div>
   </header>
 
@@ -369,7 +369,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The fourteen</div>
+    <div class="eyebrow">The fifteen</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -386,6 +386,7 @@ Content-Type: application/json</pre>
       <a href="#bookings-create"><span class="verb v-post">post</span><span class="ipath">/api/v1/bookings</span><span class="iwhat">claim a seat, atomically</span></a>
       <a href="#bookings-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/bookings/me</span><span class="iwhat">the caller's bookings</span></a>
       <a href="#bookings-cancel"><span class="verb v-delete">del</span><span class="ipath">/api/v1/bookings/{booking_id}</span><span class="iwhat">give the seat back</span></a>
+      <a href="#compare"><span class="verb v-get">get</span><span class="ipath">/api/v1/compare/{ride_id}</span><span class="iwhat">the same trip three ways: time, cost, CO₂</span></a>
     </nav>
   </section>
 
@@ -1113,6 +1114,86 @@ Authorization: Bearer &lt;clerk_jwt&gt;
     </article>
   </section>
 
+
+  <section id="comparison">
+    <div class="eyebrow">Comparison</div>
+    <h2>The same trip, three ways</h2>
+
+    <article class="endpoint" id="compare">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/compare/{ride_id}</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Requirement 4. For one ride - this driver's car, this route - what the trip costs in
+          time, dollars and CO&#8322; as a carpool seat, by public transport, and driving alone.
+          Three rows of the same four fields, so one component renders all of them.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/compare/7c04a1b2-…</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"ride_id"</span>: "7c04…",
+  <span class="k">"riders"</span>: 3,
+  <span class="k">"is_concession"</span>: true,
+  <span class="k">"fuel_price"</span>: 2.299,
+  <span class="k">"modes"</span>: [
+    { <span class="k">"mode"</span>: "carpool", <span class="k">"duration_min"</span>: 27,  <span class="k">"cost"</span>: 1.26, <span class="k">"co2_kg"</span>: 0.95 },
+    { <span class="k">"mode"</span>: "transit", <span class="k">"duration_min"</span>: 101, <span class="k">"cost"</span>: 2.85, <span class="k">"co2_kg"</span>: 2.08 },
+    { <span class="k">"mode"</span>: "private", <span class="k">"duration_min"</span>: 27,  <span class="k">"cost"</span>: 3.79, <span class="k">"co2_kg"</span>: 3.81 }
+  ],
+  <span class="k">"transit_legs"</span>: [
+    { <span class="k">"mode"</span>: "walk", <span class="k">"distance_km"</span>: 1.23, <span class="k">"duration_min"</span>: 16, <span class="k">"line"</span>: null },
+    { <span class="k">"mode"</span>: "bus",  <span class="k">"distance_km"</span>: 5.23, <span class="k">"duration_min"</span>: 12, <span class="k">"line"</span>: "691" },
+    …
+  ]
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td class="name">riders</td><td>Confirmed bookings plus the caller, unless they already hold a seat. The carpool row is priced for this many</td></tr>
+              <tr><td class="name">is_concession</td><td>Which myki fare the transit row used: $2.85 concession, $5.70 full</td></tr>
+              <tr><td class="name">fuel_price</td><td>Dollars per litre, today's statewide median from Servo Saver. <code>null</code> for an electric car, which is costed on a fixed electricity price instead</td></tr>
+              <tr><td class="name">modes[].cost</td><td>Dollars. Carpool is per passenger; private is the whole tank</td></tr>
+              <tr><td class="name">modes[].co2_kg</td><td>Carpool is per occupant, driver included; transit is the sum over legs</td></tr>
+              <tr><td class="name">transit_legs</td><td>The public transport journey, leg by leg, for drawing. <code>null</code> only if the transit route is not cached and cannot be fetched</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">404</td><td>No such ride, or no fuel price on record yet (the daily job has never run)</td></tr>
+              <tr><td class="num">422</td><td>The path segment is not a UUID</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Show the assumptions.</strong> Two people comparing the same
+          ride can get different numbers - a staff member sees a $5.70 fare, a student $2.85,
+          and someone who has already booked is not counted twice. <code>riders</code>,
+          <code>is_concession</code> and <code>fuel_price</code> travel with the answer so the
+          screen can say <em>"3 riders, concession myki, fuel at $2.30"</em> under the table.</div>
+        <div class="note"><strong>Two different denominators, on purpose.</strong> Carpool cost
+          divides among <em>passengers</em> - the driver was making the trip anyway and is not
+          charged. Carpool CO&#8322; divides among <em>occupants</em> - everyone in the car,
+          driver included. Both are the proposal's formulas; do not unify them.</div>
+        <div class="note"><strong>The fuel price is a day old, and that is by design.</strong>
+          Servo Saver publishes with a 24-hour delay and allows ten requests a minute. A job
+          fetches once each morning and the request path only ever reads the newest row, so two
+          comparisons minutes apart cannot disagree, and an outage costs a day of freshness rather
+          than the dashboard.</div>
+      </div>
+    </article>
+  </section>
+
   <section id="errors">
     <div class="eyebrow">Errors</div>
     <h2>Status codes</h2>
@@ -1175,21 +1256,19 @@ Authorization: Bearer &lt;clerk_jwt&gt;
       on the router. A request to any of them gets a 404 from FastAPI before reaching any of your
       code, so do not build against them yet.</p>
     <div class="planned">
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/compare/{ride_id}</span><span class="sprint">sprint 5</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rewards/me</span><span class="sprint">sprint 5</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/me</span><span class="sprint">sprint 6</span></div>
       <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/accessories</span><span class="sprint">sprint 6</span></div>
       <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/pet/accessories/buy</span><span class="sprint">sprint 6</span></div>
       <div class="row"><span class="verb v-put">put</span><span class="ppath">/api/v1/pet/accessories/{id}/equip</span><span class="sprint">sprint 6</span></div>
     </div>
-    <div class="note"><strong>Everything left is a calculation or a reward.</strong> The
-      marketplace is complete: rides can be posted, found, opened and booked. What remains reads
-      that data rather than adding to it - the comparison dashboard, the points a completed ride
-      earns, and the pet those points feed.</div>
+    <div class="note"><strong>Everything left is a reward.</strong> The marketplace and the
+      comparison are complete. What remains is Sprint 6: the points a completed ride earns, the
+      pet those points feed, and the shop.</div>
   </section>
 
   <footer>
-    <p>Read off the live route table on 13 September 2026, with Sprint 4's bookings landed and <code>GET /rides/mine</code> added for the frontend's My drives page. If this
+    <p>Read off the live route table on 13 September 2026, with Sprint 5's comparison dashboard landed. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

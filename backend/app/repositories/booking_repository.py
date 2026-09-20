@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from postgrest import CountMethod
 from pydantic import TypeAdapter
 
 from app.schemas.booking import Booking, RpcResult
@@ -60,3 +61,16 @@ def get_confirmed(db: Client, *, ride_id: UUID, passenger_id: UUID) -> Booking |
         .execute()
     )
     return Booking.model_validate(res.data[0]) if res.data else None
+
+
+# count number of confirmed passengers for this ride
+def count_confirmed(db: Client, *, ride_id: UUID) -> int:
+    count = (
+        db.table(TABLE)
+        .select("id", count=CountMethod.exact)  # asks postgres to send the count number back
+        .eq("ride_id", str(ride_id))
+        .eq("status", "confirmed")
+        .execute()
+    ).count
+
+    return count or 0

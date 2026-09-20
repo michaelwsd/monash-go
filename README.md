@@ -97,6 +97,17 @@ uv run python scripts/prepare_vehicle_reference.py
 uv run python scripts/seed_vehicle_reference.py
 ```
 
+To fetch today's fuel prices:
+
+```bash
+uv run python -m scripts.fetch_fuel_prices
+```
+
+Three rows into `fuel_prices` - petrol, diesel, hybrid - the statewide median from Servo Saver
+in dollars per litre. `GET /compare/{ride_id}` reads the newest row and never calls the API
+itself. In production `.github/workflows/fuel-prices.yml` runs this every morning; it needs to
+have run at least once or every comparison is a 404.
+
 To warm the campus route cache:
 
 ```bash
@@ -248,10 +259,9 @@ Grab `$TOKEN` from the browser devtools on a signed-in frontend session.
 live route table rather than the plan: request and response shapes, field rules, status
 codes, and a list of what is specified but not yet built. Open it in a browser.
 
-Fourteen endpoints are live as of Sprint 4: user sync and profile, vehicle registration and
-the reference lookup, the four rides endpoints, and the three bookings endpoints. The
-marketplace is complete - what remains reads that data rather than adding to it: the
-comparison dashboard, the points a completed ride earns, and the pet those points feed.
+Fifteen endpoints are live as of Sprint 5: user sync and profile, vehicle registration and
+the reference lookup, the four rides endpoints, the three bookings endpoints, and the comparison. What remains is
+Sprint 6: the points a completed ride earns, the pet those points feed, and the shop.
 
 Three rules that catch people out:
 

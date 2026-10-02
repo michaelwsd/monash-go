@@ -45,12 +45,12 @@ def compare(db: Client, http: httpx.Client, *, clerk_id: str, ride_id: UUID) -> 
     # driver, see the ride as it is. The driver never holds a booking, so
     # without this branch they would be handed a phantom extra rider - and a
     # different figure from the one their own passenger sees.
-    confirmed = booking_repository.count_confirmed(db, ride_id=ride_id)
+    seated = booking_repository.count_seated(db, ride_id=ride_id)
     if viewer.id == ride.driver_id:
-        riders = max(confirmed, 1)
+        riders = max(seated, 1)
     else:
-        mine = booking_repository.get_confirmed(db, ride_id=ride_id, passenger_id=viewer.id)
-        riders = confirmed + (0 if mine else 1)
+        mine = booking_repository.get_seat(db, ride_id=ride_id, passenger_id=viewer.id)
+        riders = seated + (0 if mine else 1)
 
     fuel_price = (
         None

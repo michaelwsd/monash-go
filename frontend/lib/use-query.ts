@@ -71,9 +71,13 @@ export function useQuery<T>(
       } catch (caught) {
         if (cancelled) return;
         setError(
-          caught instanceof ApiError && caught.status < 500
-            ? caught.message
-            : "Something went wrong. Please try again.",
+          !(caught instanceof ApiError)
+            ? "Something went wrong. Please try again."
+            : caught.status < 500
+              ? caught.message
+              : // the body of a 5xx is not for users, but the code tells a
+                // crash (500) from a dead upstream (502) when it is reported
+                `The server ran into a problem (${caught.status}). Please try again.`,
         );
         setStatus("error");
       }

@@ -47,11 +47,21 @@ export function EmptyState({
   );
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+export function ErrorState({
+  message,
+  detail,
+  onRetry,
+}: {
+  message: string;
+  /** Why it failed, in the API's words. Without it every failure looks the same. */
+  detail?: string | null;
+  onRetry: () => void;
+}) {
   return (
     <Card className="items-center gap-2 p-8 text-center">
       <AlertCircle className="size-5 text-muted-foreground" aria-hidden />
       <p className="text-sm font-medium">{message}</p>
+      {detail && <p className="max-w-sm text-xs text-balance text-muted-foreground">{detail}</p>}
       <Button variant="outline" size="lg" onClick={onRetry}>
         Try again
       </Button>

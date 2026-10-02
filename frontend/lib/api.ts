@@ -76,13 +76,21 @@ export async function apiFetch<T>(
     throw new ApiError(0, "NEXT_PUBLIC_API_URL is not set");
   }
 
-  const response = await fetch(`${BASE_URL}/api/v1${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}/api/v1${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  } catch {
+    // fetch only rejects when no response came back at all: the server is
+    // down, the network is, or CORS refused it. Status 0 says "no response",
+    // and naming it is what tells a person this is not their fault.
+    throw new ApiError(0, "Can't reach the server. Check your connection and try again.");
+  }
 
   if (!response.ok) {
     throw new ApiError(response.status, await errorMessage(response));
@@ -269,6 +277,16 @@ export interface Booking {
   ride_id: string;
   status: BookingStatus;
   created_at: string;
+}
+
+/**
+ * Whether a booking still holds its seat. 'completed' is a confirmed booking
+ * whose ride has happened, so it keeps everything a seat gives - the driver's
+ * number, the trip on My trips. Mirrors SEATED in
+ * backend/app/repositories/booking_repository.py.
+ */
+export function holdsSeat(booking: Booking): boolean {
+  return booking.status === "confirmed" || booking.status === "completed";
 }
 
 /**

@@ -116,7 +116,7 @@ def get_ride(db: Client, *, clerk_id: str, ride_id: UUID) -> RideDetail:
 
     viewer = user_repository.get_by_clerk_id(db, clerk_id)
     booked = viewer is not None and (
-        booking_repository.get_confirmed(db, ride_id=ride.id, passenger_id=viewer.id) is not None
+        booking_repository.get_seat(db, ride_id=ride.id, passenger_id=viewer.id) is not None
     )
 
     if booked:
@@ -147,7 +147,7 @@ def list_passengers(db: Client, *, clerk_id: str, ride_id: UUID) -> list[RidePas
         raise PermissionDeniedError("only the driver can see who is booked")
 
     passengers: list[RidePassenger] = []
-    for booking in booking_repository.list_confirmed_for_ride(db, ride_id=ride.id):
+    for booking in booking_repository.list_seated_for_ride(db, ride_id=ride.id):
         passenger = user_repository.get_by_id(db, booking.passenger_id)
         if passenger is None:
             # a booking whose passenger row is gone is a broken foreign key,

@@ -80,6 +80,7 @@ export default function RewardsPage() {
       {rewards.status === "error" && (
         <ErrorState
           message="Couldn't load your rewards."
+          detail={rewards.error}
           onRetry={rewards.reload}
         />
       )}
@@ -92,6 +93,7 @@ export default function RewardsPage() {
             points={rewards.data.green_points}
             loading={shop.status === "loading"}
             failed={shop.status === "error"}
+            error={shop.error}
             onRetry={shop.reload}
             onChanged={changed}
           />
@@ -263,6 +265,7 @@ function Shop({
   points,
   loading,
   failed,
+  error: loadError,
   onRetry,
   onChanged,
 }: {
@@ -270,6 +273,7 @@ function Shop({
   points: number;
   loading: boolean;
   failed: boolean;
+  error: string | null;
   onRetry: () => void;
   onChanged: () => void;
 }) {
@@ -297,11 +301,8 @@ function Shop({
   };
 
   if (failed) {
-    return (
-      <Card className="p-3.5">
-        <ErrorState message="Couldn't load the shop." onRetry={onRetry} />
-      </Card>
-    );
+    // ErrorState is a card already; wrapping it drew a box inside a box
+    return <ErrorState message="Couldn't load the shop." detail={loadError} onRetry={onRetry} />;
   }
 
   if (loading && !items) {

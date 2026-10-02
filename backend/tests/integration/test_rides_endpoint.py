@@ -186,7 +186,7 @@ class FakeRouteService:
 
 
 class FakeBookingRepo:
-    """Whether the caller holds a confirmed seat on the ride they are viewing.
+    """Whether the caller holds a seat on the ride they are viewing.
 
     That single fact decides whether the response carries the driver's phone
     number, so it is a knob the tests turn rather than a table they populate.
@@ -195,7 +195,7 @@ class FakeBookingRepo:
     def __init__(self) -> None:
         self.has_confirmed_seat = False
 
-    def list_confirmed_for_ride(self, db: object, *, ride_id: UUID) -> list[Booking]:
+    def list_seated_for_ride(self, db: object, *, ride_id: UUID) -> list[Booking]:
         if not self.has_confirmed_seat:
             return []
         return [
@@ -208,7 +208,7 @@ class FakeBookingRepo:
             )
         ]
 
-    def get_confirmed(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
+    def get_seat(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
         if not self.has_confirmed_seat:
             return None
         return Booking(
@@ -831,7 +831,7 @@ def test_a_cancelled_booking_takes_the_phone_back(
     wired: tuple[TestClient, FakeRideRepo, FakeRouteRepo, FakeBookingRepo],
     make_token: Callable[..., str],
 ) -> None:
-    """get_confirmed filters on status, so giving the seat back gives the
+    """get_seat filters on status, so giving the seat back gives the
     number back too. A booking that merely once existed is not enough."""
     client, _, _, bookings = wired
     token = make_token(sub=CLERK_ID)

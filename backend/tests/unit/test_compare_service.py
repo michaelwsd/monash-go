@@ -134,10 +134,10 @@ class FakeBookingRepo:
         self.confirmed = confirmed
         self.viewer_booked = viewer_booked
 
-    def count_confirmed(self, db: object, *, ride_id: UUID) -> int:
+    def count_seated(self, db: object, *, ride_id: UUID) -> int:
         return self.confirmed
 
-    def get_confirmed(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
+    def get_seat(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
         if not self.viewer_booked or passenger_id != VIEWER.id:
             return None
         return Booking(

@@ -92,8 +92,10 @@ class FakeBookingRepo:
     def __init__(self, rows: list[Booking] | None = None) -> None:
         self.rows = rows or []
 
-    def list_confirmed_for_ride(self, db: object, *, ride_id: UUID) -> list[Booking]:
-        return [b for b in self.rows if b.ride_id == ride_id and b.status == "confirmed"]
+    def list_seated_for_ride(self, db: object, *, ride_id: UUID) -> list[Booking]:
+        return [
+            b for b in self.rows if b.ride_id == ride_id and b.status in ("confirmed", "completed")
+        ]
 
 
 class FakeVehicleRepo:
@@ -452,6 +454,25 @@ def test_a_cancelled_booking_is_not_a_passenger(monkeypatch: pytest.MonkeyPatch)
     )
 
     assert ride_service.list_passengers(DB, clerk_id=OWNER.clerk_id, ride_id=mine.id) == []
+
+
+def test_a_passenger_stays_on_the_list_after_the_ride_is_completed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Completion moves every booking to 'completed'. They rode the trip, so
+    the driver must still be able to see and call them."""
+    car = vehicle()
+    _, _ = install(monkeypatch, car=car)
+    mine = ride_service.create(DB, HTTP, clerk_id=OWNER.clerk_id, payload=payload(car.id))
+    monkeypatch.setattr(
+        ride_service,
+        "booking_repository",
+        FakeBookingRepo([booked(mine.id, PASSENGER.id, status="completed")]),
+    )
+
+    listed = ride_service.list_passengers(DB, clerk_id=OWNER.clerk_id, ride_id=mine.id)
+
+    assert [p.full_name for p in listed] == ["Pat Passenger"]
 
 
 def test_passengers_of_a_missing_ride_is_a_not_found(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -408,6 +408,10 @@ async function main(): Promise<void> {
   const riderView = await api.getRide(past.id, { token: rider.token });
   check("and the ride the passenger reads carries its earnings", riderView.points_earned === awarded.points_earned);
   check("the passenger still sees the phone number", "phone" in riderView.driver);
+  const stillAboard = await api.getRidePassengers(past.id, { token: driver.token });
+  check("the driver still sees who rode", stillAboard.length === 1);
+  const afterwards = await api.getComparison(past.id, { token: rider.token });
+  check("the comparison still counts the rider once", afterwards.riders === 1);
 
   step("completing again changes nothing");
   const repeat = await api.completeRide(past.id, { token: driver.token });

@@ -30,6 +30,7 @@ import {
   getMyBookings,
   getRide,
   getRidePassengers,
+  holdsSeat,
   type Booking,
   type ModeComparison,
   type RideDetail,
@@ -79,8 +80,7 @@ export default function RidePage() {
           ride={ride.data}
           version={version}
           myBooking={
-            bookings.data?.find((b) => b.ride_id === ride.data?.id && b.status === "confirmed") ??
-            null
+            bookings.data?.find((b) => b.ride_id === ride.data?.id && holdsSeat(b)) ?? null
           }
           onChanged={() => setVersion((v) => v + 1)}
         />
@@ -191,7 +191,7 @@ function Ride({
 
         {/* Presence of the key is the signal: the backend picks a response
             model with or without it depending on whether the caller holds a
-            confirmed seat. */}
+            seat - confirmed, or completed once the ride has run. */}
         {/* The number is on the ride response, which is refetched after a
             booking - so for one round trip the seat is booked and the number
             has not arrived. Saying so makes its appearance expected rather than
@@ -281,7 +281,7 @@ function BookingPanel({
       <Card className="gap-3 border-eco-border bg-eco-muted/40 p-3.5 animate-in fade-in-0 duration-300 motion-reduce:animate-none">
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-eco-foreground">
           <Check className="size-4" aria-hidden />
-          Seat booked
+          {booking.status === "completed" ? "Trip completed" : "Seat booked"}
         </p>
         {seat && <YourSeat seat={seat} />}
         {seats}

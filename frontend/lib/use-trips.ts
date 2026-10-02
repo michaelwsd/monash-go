@@ -1,6 +1,6 @@
 "use client";
 
-import { getMyBookings, getRide, type Booking, type RideDetail } from "@/lib/api";
+import { getMyBookings, getRide, holdsSeat, type Booking, type RideDetail } from "@/lib/api";
 import { isUpcoming } from "@/lib/time";
 import { useQuery, type QueryState } from "@/lib/use-query";
 
@@ -23,9 +23,7 @@ export interface Trip {
  */
 export function useMyTrips(): QueryState<Trip[]> {
   return useQuery(async (token) => {
-    const bookings = (await getMyBookings({ token })).filter(
-      (b) => b.status === "confirmed" || b.status === "completed",
-    );
+    const bookings = (await getMyBookings({ token })).filter(holdsSeat);
     const rides = await Promise.all(bookings.map((b) => getRide(b.ride_id, { token })));
     return bookings
       .map((booking, i) => ({ booking, ride: rides[i] }))

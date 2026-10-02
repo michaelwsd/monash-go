@@ -96,10 +96,10 @@ class FakeVehicleRepo:
 
 
 class FakeBookingRepo:
-    def count_confirmed(self, db: object, *, ride_id: UUID) -> int:
+    def count_seated(self, db: object, *, ride_id: UUID) -> int:
         return 1
 
-    def get_confirmed(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
+    def get_seat(self, db: object, *, ride_id: UUID, passenger_id: UUID) -> Booking | None:
         return None
 
 

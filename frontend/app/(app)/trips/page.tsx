@@ -108,6 +108,14 @@ function TripRow({ trip: { ride } }: { trip: Trip }) {
           <p className="mt-0.5 truncate text-[11.5px] text-muted-foreground">
             {ride.driver.full_name} &middot; {ride.vehicle.make} {ride.vehicle.model}
           </p>
+          {/* Written when the driver marked the ride complete; everyone on it
+              was credited this much. */}
+          {ride.co2_saved !== null && ride.points_earned !== null && (
+            <p className="mt-1 text-[11.5px] text-eco-foreground tabular-nums">
+              {ride.co2_saved.toFixed(2)} kg avoided &middot;{" "}
+              {ride.points_earned.toLocaleString()} points
+            </p>
+          )}
         </div>
 
         <Badge

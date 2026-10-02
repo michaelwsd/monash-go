@@ -87,3 +87,15 @@ def list_confirmed_for_ride(db: Client, *, ride_id: UUID) -> list[Booking]:
         .execute()
     )
     return [Booking.model_validate(row) for row in res.data]
+
+
+def count_completed_for_passenger(db: Client, *, passenger_id: UUID) -> int:
+    """Trips this user has finished as a passenger."""
+    res = (
+        db.table(TABLE)
+        .select("id", count=CountMethod.exact)
+        .eq("passenger_id", str(passenger_id))
+        .eq("status", "completed")
+        .execute()
+    )
+    return res.count or 0

@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { ErrorState, Skeleton } from "@/components/status-blocks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { campusLabel, getMyVehicles } from "@/lib/api";
+import { campusLabel, getMyVehicles, getRewards } from "@/lib/api";
 import { formatTime, isUpcoming, relativeDay } from "@/lib/time";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useQuery } from "@/lib/use-query";
@@ -23,6 +23,7 @@ const LABEL = "text-[10px] font-medium tracking-[0.04em] text-muted-foreground u
 export default function DashboardPage() {
   const trips = useMyTrips();
   const vehicles = useQuery((token) => getMyVehicles({ token }), []);
+  const rewards = useQuery((token) => getRewards({ token }), []);
   const { user } = useCurrentUser();
 
   return (
@@ -37,11 +38,13 @@ export default function DashboardPage() {
         </div>
 
         <Card className="gap-0 p-3.5">
-          <p className={LABEL}>Your trips</p>
+          <p className={LABEL}>Your impact</p>
           <Stats
             trips={trips.data}
             cars={vehicles.data?.length ?? null}
             points={user?.green_points ?? null}
+            co2={rewards.data?.total_co2_saved ?? null}
+            completed={rewards.data?.completed_trips ?? null}
           />
         </Card>
 
@@ -65,28 +68,32 @@ export default function DashboardPage() {
 }
 
 /**
- * What the bookings add up to. Every number here is derived from data the
- * page already fetched; nothing is estimated. A null shows as a dash while
- * its source is still loading, so the tiles keep their place.
+ * REQ-013 in miniature: what this user's trips add up to. CO2 and completed
+ * trips are the backend's own figures from GET /rewards/me - the ones the pet
+ * grows on - not something derived here, so the dashboard and the rewards page
+ * can never disagree. A null shows as a dash while its source loads, so the
+ * tiles keep their place.
  */
 function Stats({
   trips,
   cars,
   points,
+  co2,
+  completed,
 }: {
   trips: Trip[] | null;
   cars: number | null;
   points: number | null;
+  co2: number | null;
+  completed: number | null;
 }) {
-  const past = trips?.filter((t) => !isUpcoming(t.ride.departure_at)) ?? null;
   const upcoming = trips?.filter((t) => isUpcoming(t.ride.departure_at)) ?? null;
-  const km = past?.reduce((sum, t) => sum + t.ride.distance_km, 0) ?? null;
 
   const tiles: { value: string; label: string; eco?: boolean }[] = [
-    { value: past ? String(past.length) : "–", label: "trips taken" },
-    { value: upcoming ? String(upcoming.length) : "–", label: "coming up" },
-    { value: km !== null ? `${km.toFixed(0)} km` : "–", label: "shared", eco: true },
+    { value: co2 !== null ? `${co2.toFixed(1)} kg` : "–", label: "CO₂ avoided", eco: true },
     { value: points !== null ? points.toLocaleString() : "–", label: "green points" },
+    { value: completed !== null ? String(completed) : "–", label: "trips completed" },
+    { value: upcoming ? String(upcoming.length) : "–", label: "coming up" },
     { value: cars !== null ? String(cars) : "–", label: cars === 1 ? "car" : "cars" },
   ];
 

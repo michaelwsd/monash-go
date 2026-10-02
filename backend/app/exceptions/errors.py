@@ -61,3 +61,15 @@ class RideFullError(DomainError):
 
 class AlreadyBookedError(DomainError):
     status_code = 409
+
+
+class InsufficientPointsError(DomainError):
+    """not enough green points for this purchase"""
+
+    status_code = 402
+
+
+class StageLockedError(DomainError):
+    """the pet has not grown far enough for this accessory"""
+
+    status_code = 403

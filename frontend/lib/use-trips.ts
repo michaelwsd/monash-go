@@ -16,11 +16,16 @@ export interface Trip {
  * to GET /rides/{id}. That is one request per booking, which is fine here: it
  * is bounded by how many trips one person has, not by a search result.
  *
- * Confirmed bookings only. A cancelled one has no seat and no trip.
+ * Confirmed and completed bookings. A cancelled one has no seat and no trip,
+ * but a completed one is a trip that happened - it is the row that shows what
+ * the trip earned, so dropping it would hide every reward the user has ever
+ * been paid.
  */
 export function useMyTrips(): QueryState<Trip[]> {
   return useQuery(async (token) => {
-    const bookings = (await getMyBookings({ token })).filter((b) => b.status === "confirmed");
+    const bookings = (await getMyBookings({ token })).filter(
+      (b) => b.status === "confirmed" || b.status === "completed",
+    );
     const rides = await Promise.all(bookings.map((b) => getRide(b.ride_id, { token })));
     return bookings
       .map((booking, i) => ({ booking, ride: rides[i] }))

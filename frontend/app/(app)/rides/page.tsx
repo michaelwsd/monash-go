@@ -9,10 +9,11 @@ import { AppShell } from "@/components/app-shell";
 import { DateField } from "@/components/date-field";
 import { SelectField } from "@/components/form-fields";
 import { RideCard } from "@/components/ride-card";
+import { RouteEstimatePanel } from "@/components/route-estimate";
 import { EmptyState, ErrorState, Skeleton } from "@/components/status-blocks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CAMPUS_OPTIONS, searchRides, type Campus } from "@/lib/api";
+import { CAMPUS_OPTIONS, getRouteEstimate, searchRides, type Campus } from "@/lib/api";
 import { formatLongDate, todayMelbourne, toMelbourneInstant } from "@/lib/time";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useQuery } from "@/lib/use-query";
@@ -142,6 +143,12 @@ function Results({ origin, destination, on }: { origin: Campus; destination: Cam
     (token) => searchRides({ origin, destination, on }, { token }),
     [origin, destination, on],
   );
+  // Fetched alongside the rides, not after them, and keyed on the route only:
+  // the estimate does not depend on the day, so changing the date reuses it.
+  const estimate = useQuery(
+    (token) => getRouteEstimate({ origin, destination }, { token }),
+    [origin, destination],
+  );
 
   if (rides.status === "loading") return <Skeleton rows={3} />;
   if (rides.status === "error" || rides.data === null) {
@@ -154,19 +161,22 @@ function Results({ origin, destination, on }: { origin: Campus; destination: Cam
 
   if (rides.data.length === 0) {
     return (
-      <EmptyState
-        icon={Car}
-        title={`No rides on ${day}`}
-        body="Nobody's posted this route yet. Driving it yourself?"
-        action={
-          <Button size="lg" asChild>
-            <Link href="/rides/new">
-              Post a drive
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-        }
-      />
+      <div className="flex flex-col gap-3.5">
+        <EmptyState
+          icon={Car}
+          title={`No rides on ${day}`}
+          body="Nobody's posted this route yet. Driving it yourself?"
+          action={
+            <Button size="lg" asChild>
+              <Link href="/rides/new">
+                Post a drive
+                <ArrowRight aria-hidden />
+              </Link>
+            </Button>
+          }
+        />
+        <RouteEstimatePanel estimate={estimate} />
+      </div>
     );
   }
 
@@ -178,6 +188,9 @@ function Results({ origin, destination, on }: { origin: Campus; destination: Cam
       {rides.data.map((ride) => (
         <RideCard key={ride.id} ride={ride} />
       ))}
+      <div className="mt-1">
+        <RouteEstimatePanel estimate={estimate} />
+      </div>
     </section>
   );
 }

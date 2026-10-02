@@ -221,6 +221,9 @@ header.masthead {
 }
 .b-auth { color: var(--accent-ink); }
 .b-open { color: var(--slate); }
+/* Only the driver of that ride may call it - not merely any authenticated
+   user. The two endpoints that carry it both answer 403 to a passenger. */
+.b-driver { color: var(--slate); margin-left: 0.4rem; }
 .ep-body { padding: 1.15rem; display: flex; flex-direction: column; gap: 1.1rem; }
 .ep-body > p { max-width: var(--measure); }
 .cols {
@@ -328,12 +331,12 @@ footer {
     <div class="eyebrow">MonashGO &middot; backend</div>
     <h1>API Reference</h1>
     <p class="lede measure">Every endpoint the FastAPI app actually serves today, read off the
-      running route table rather than the plan. Sixteen are callable; the five at the bottom are
-      specified but not built, and calling one returns a 404 from the router, not from your code.</p>
+      running route table rather than the plan. All twenty-one are callable: with Sprint 6 landed
+      there is nothing left in <code>CLAUDE.md</code> that is specified but not mounted.</p>
     <div class="stamp">
       <span>base <code>/api/v1</code></span>
-      <span>16 live endpoints</span>
-      <span>generated 20 Sep 2026</span>
+      <span>21 live endpoints</span>
+      <span>generated 2 Oct 2026</span>
     </div>
   </header>
 
@@ -369,7 +372,7 @@ Content-Type: application/json</pre>
   </section>
 
   <section id="index">
-    <div class="eyebrow">The sixteen</div>
+    <div class="eyebrow">The twenty-one</div>
     <h2>What you can call today</h2>
     <nav class="index" aria-label="Endpoint index">
       <a href="#health"><span class="verb v-get">get</span><span class="ipath">/health</span><span class="iwhat">liveness and which environment answered</span></a>
@@ -388,6 +391,13 @@ Content-Type: application/json</pre>
       <a href="#bookings-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/bookings/me</span><span class="iwhat">the caller's bookings</span></a>
       <a href="#bookings-cancel"><span class="verb v-delete">del</span><span class="ipath">/api/v1/bookings/{booking_id}</span><span class="iwhat">give the seat back</span></a>
       <a href="#compare"><span class="verb v-get">get</span><span class="ipath">/api/v1/compare/{ride_id}</span><span class="iwhat">the same trip three ways: time, cost, CO₂</span></a>
+      <a href="#compare-route"><span class="verb v-get">get</span><span class="ipath">/api/v1/compare/route</span><span class="iwhat">a rough comparison for a route nobody has posted</span></a>
+      <a href="#rides-complete"><span class="verb v-patch">patch</span><span class="ipath">/api/v1/rides/{ride_id}/complete</span><span class="iwhat">the driver confirms it happened - this is what pays</span></a>
+      <a href="#rewards-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/rewards/me</span><span class="iwhat">points, CO₂ avoided, pet stage, progress</span></a>
+      <a href="#pet-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/pet/me</span><span class="iwhat">the pet and everything it owns</span></a>
+      <a href="#pet-shop"><span class="verb v-get">get</span><span class="ipath">/api/v1/pet/accessories</span><span class="iwhat">the shop, annotated for this user</span></a>
+      <a href="#pet-buy"><span class="verb v-post">post</span><span class="ipath">/api/v1/pet/accessories/buy</span><span class="iwhat">spend points on an accessory</span></a>
+      <a href="#pet-equip"><span class="verb v-put">put</span><span class="ipath">/api/v1/pet/accessories/{id}/equip</span><span class="iwhat">put it on the pet, or take it off</span></a>
     </nav>
   </section>
 
@@ -980,6 +990,7 @@ Authorization: Bearer &lt;clerk_jwt&gt;
         <span class="verb v-get">get</span>
         <span class="ep-path">/api/v1/rides/{ride_id}/passengers</span>
         <span class="badge b-auth">auth</span>
+        <span class="badge b-driver">driver only</span>
       </div>
       <div class="ep-body">
         <p>Everyone with a confirmed seat on the ride, in the order they booked, with their phone
@@ -1237,6 +1248,380 @@ Authorization: Bearer &lt;clerk_jwt&gt;
           than the dashboard.</div>
       </div>
     </article>
+
+    <article class="endpoint" id="compare-route">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/compare/route</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>The same comparison for a campus pair with no ride behind it, so a search that finds
+          nothing still answers "what would this trip cost?". There is no driver's car, so it
+          prices the fleet-average petrol car (11.1 L/100km, ABS) with one passenger, and it
+          carries the routes Google returned so the page can draw the journey.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/compare/route?origin=peninsula&amp;destination=caulfield</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"origin"</span>: "peninsula",
+  <span class="k">"destination"</span>: "caulfield",
+  <span class="k">"distance_km"</span>: 43.84,
+  <span class="k">"fuel_consumption"</span>: 11.1,
+  <span class="k">"drive_summary"</span>: "M3 and M1",
+  <span class="k">"transit_summary"</span>: "Bus 783 → Train Frankston",
+  <span class="k">"riders"</span>: 1,
+  <span class="k">"is_concession"</span>: true,
+  <span class="k">"fuel_price"</span>: 2.369,
+  <span class="k">"modes"</span>: [
+    { <span class="k">"mode"</span>: "carpool", <span class="k">"duration_min"</span>: 37, <span class="k">"cost"</span>: 11.53, <span class="k">"co2_kg"</span>: 5.62 },
+    { <span class="k">"mode"</span>: "transit", <span class="k">"duration_min"</span>: 66, <span class="k">"cost"</span>: 2.85,  <span class="k">"co2_kg"</span>: 1.36 },
+    { <span class="k">"mode"</span>: "private", <span class="k">"duration_min"</span>: 37, <span class="k">"cost"</span>: 11.53, <span class="k">"co2_kg"</span>: 11.24 }
+  ],
+  <span class="k">"transit_legs"</span>: [ … ]
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td class="name">distance_km</td><td>The cached driving distance between the two campuses</td></tr>
+              <tr><td class="name">fuel_consumption</td><td>L/100km of the assumed car. Always the fleet average, never a user's own car</td></tr>
+              <tr><td class="name">riders</td><td>Always 1: the smallest carpool, so the estimate never overstates what sharing saves</td></tr>
+              <tr><td class="name">drive_summary, transit_summary</td><td>Google's one-line route names, for drawing the journey</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">400</td><td>Origin and destination are the same campus</td></tr>
+              <tr><td class="num">404</td><td>No petrol price on record yet</td></tr>
+              <tr><td class="num">422</td><td>A campus that is not in the CAMPUS enum</td></tr>
+              <tr><td class="num">502</td><td>The route is not cached and Google could not be reached</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Declared before <code>/{ride_id}</code>.</strong> FastAPI
+          matches path operations in order; the other way round, <code>route</code> would be
+          read as a ride id and rejected as a bad UUID.</div>
+      </div>
+    </article>
+  </section>
+
+
+  <section id="rewards">
+    <div class="eyebrow">Rewards</div>
+    <h2>Finishing a ride, and what it earns</h2>
+
+    <p class="measure">Nothing else in the product writes <code>rides.co2_saved</code>,
+      <code>users.green_points</code> or <code>rewards.total_co2_saved</code>. One endpoint does,
+      once per ride, and everything on the rewards screen is downstream of it.</p>
+
+    <article class="endpoint" id="rides-complete">
+      <div class="ep-head">
+        <span class="verb v-patch">patch</span>
+        <span class="ep-path">/api/v1/rides/{ride_id}/complete</span>
+        <span class="badge b-auth">auth</span>
+        <span class="badge b-driver">driver only</span>
+      </div>
+      <div class="ep-body">
+        <p>The driver confirms the trip happened. That marks the ride
+          <code>completed</code>, moves every confirmed booking to <code>completed</code>, and
+          credits the driver and every passenger with the CO&#8322; the carpool avoided and the
+          points it is worth. There is no body - the figures are the backend's to compute, never
+          the client's to supply.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>PATCH /api/v1/rides/7c04a1b2-…/complete</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"ride_id"</span>: "7c04…",
+  <span class="k">"co2_saved"</span>: 7.26264,
+  <span class="k">"points_earned"</span>: 726,
+  <span class="k">"passengers"</span>: 2,
+  <span class="k">"already_completed"</span>: false
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td class="name">co2_saved</td><td>Kilograms this one ride avoided, against a fleet-average counterfactual. <strong>Not</strong> the comparison dashboard's carpool figure - different question, different formula</td></tr>
+              <tr><td class="name">points_earned</td><td><code>floor(co2_saved &times; 100)</code>. Each person on the ride receives this many, not a share of it</td></tr>
+              <tr><td class="name">passengers</td><td>How many passengers were credited alongside the driver. Confirmed bookings only; a cancelled seat was not travelled in</td></tr>
+              <tr><td class="name">already_completed</td><td>True when the ride had been completed before this call. The figures are still the ride's real ones</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">200</td><td>Completed now, or completed earlier - see <code>already_completed</code></td></tr>
+              <tr><td class="num">400</td><td>The ride has not departed yet. You cannot complete tomorrow's trip</td></tr>
+              <tr><td class="num">403</td><td>The caller is not the driver. A passenger completing the ride would be awarding themselves points</td></tr>
+              <tr><td class="num">404</td><td>No such ride</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Idempotent on purpose, and that is the whole difficulty.</strong>
+          Points are currency, and a double award cannot be undone without an audit trail the
+          schema does not have. The read-decide-write happens inside
+          <code>complete_ride()</code> in <code>0004_complete_ride.sql</code> under
+          <code>SELECT &hellip; FOR UPDATE</code> on the ride row, and a non-null
+          <code>co2_saved</code> is the marker that it has been paid. Two taps arriving together
+          produce one payout and two 200s.</div>
+        <div class="note"><strong>Everyone gets the full figure, not a share.</strong> A 7.26 kg
+          ride credits the driver 7.26 kg and each passenger 7.26 kg. Summed across accounts that
+          is more CO&#8322; than the trip actually avoided, which is deliberate: the pet
+          thresholds in <code>core/constants.py</code> were calibrated against one person banking
+          the whole figure per ride. It is gamification, not carbon accounting. The ride's own
+          <code>co2_saved</code> column holds the real, unmultiplied number.</div>
+        <div class="note"><strong>The driver taps it; nothing sweeps.</strong> There is no
+          background job marking departed rides complete. A trip that was posted and never taken
+          should not pay anyone, and only the driver knows which is which.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="rewards-me">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/rewards/me</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Requirement 13's impact dashboard in one response: what the caller's completed trips
+          add up to, and how far that is through the current pet stage.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">A fresh account</div>
+<pre>{
+  <span class="k">"green_points"</span>: 0,
+  <span class="k">"total_co2_saved"</span>: 0.0,
+  <span class="k">"pet_stage"</span>: "egg",
+  <span class="k">"next_stage"</span>: "hatched",
+  <span class="k">"co2_to_next"</span>: 15.0,
+  <span class="k">"stage_progress"</span>: 0.0,
+  <span class="k">"completed_trips"</span>: 0
+}</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">After nine rides</div>
+<pre>{
+  <span class="k">"green_points"</span>: 4211,
+  <span class="k">"total_co2_saved"</span>: 62.4,
+  <span class="k">"pet_stage"</span>: "juvenile",
+  <span class="k">"next_stage"</span>: "adult",
+  <span class="k">"co2_to_next"</span>: 137.6,
+  <span class="k">"stage_progress"</span>: 1.71,
+  <span class="k">"completed_trips"</span>: 9
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td class="name">green_points</td><td>Spendable balance from <code>users.green_points</code>, after anything bought in the shop</td></tr>
+              <tr><td class="name">total_co2_saved</td><td>Lifetime credited kilograms. This, not points, is what grows the pet</td></tr>
+              <tr><td class="name">pet_stage</td><td>Derived from <code>total_co2_saved</code> on every read rather than trusted from the column, so a threshold change takes effect without a backfill</td></tr>
+              <tr><td class="name">next_stage</td><td><code>null</code> at <code>legendary</code> - there is nothing above it</td></tr>
+              <tr><td class="name">co2_to_next</td><td>Kilograms still needed. <code>null</code> at <code>legendary</code></td></tr>
+              <tr><td class="name">stage_progress</td><td>0-100 through the current band, for a progress bar. 100 at <code>legendary</code></td></tr>
+              <tr><td class="name">completed_trips</td><td>Completed rides driven plus completed bookings ridden. One shared trip counts once for each person on it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Zero is an answer, not an absence.</strong> Requirement 13 names
+          the empty state explicitly, so a new account gets real zeroes, an egg, and a reachable
+          target - never nulls the screen has to interpret. <code>co2_to_next: 15.0</code> is the
+          <code>hatched</code> threshold.</div>
+      </div>
+    </article>
+  </section>
+
+  <section id="pet">
+    <div class="eyebrow">Pet</div>
+    <h2>The pet and its shop</h2>
+
+    <p class="measure">Two different reasons an accessory cannot be bought, kept separate
+      throughout: <em>locked</em> is a pet that has not grown far enough, which no amount of points
+      fixes, and <em>unaffordable</em> is a balance that will rise with the next trip. The screen
+      shows them differently, so the API distinguishes them.</p>
+
+    <article class="endpoint" id="pet-me">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/pet/me</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>The pet as it should be drawn, and everything the caller owns.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/pet/me</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"pet_stage"</span>: "hatched",
+  <span class="k">"total_co2_saved"</span>: 21.8,
+  <span class="k">"green_points"</span>: 1680,
+  <span class="k">"owned"</span>: [
+    {
+      <span class="k">"accessory"</span>: { <span class="k">"id"</span>: "a1…", <span class="k">"name"</span>: "Leaf cap",
+                      <span class="k">"category"</span>: "headwear", <span class="k">"cost"</span>: 400,
+                      <span class="k">"required_stage"</span>: "egg", <span class="k">"image_url"</span>: "…" },
+      <span class="k">"equipped"</span>: true,
+      <span class="k">"purchased_at"</span>: "2026-10-01T04:12:09Z"
+    }
+  ]
+}</pre>
+          </div>
+        </div>
+        <p class="measure">Every write to the pet - a purchase, an equip - answers with this same
+          shape, so one response updates the whole screen and the client never has to refetch to
+          find out what changed.</p>
+      </div>
+    </article>
+
+    <article class="endpoint" id="pet-shop">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/pet/accessories</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>The whole catalogue, cheapest first, each row annotated for this caller. Locked items
+          are returned rather than hidden: seeing what the next stage unlocks is the reason to keep
+          riding.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/pet/accessories</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>[
+  { <span class="k">"id"</span>: "a1…", <span class="k">"name"</span>: "Leaf cap", <span class="k">"cost"</span>: 400,
+    <span class="k">"required_stage"</span>: "egg",
+    <span class="k">"owned"</span>: true,  <span class="k">"equipped"</span>: true,  <span class="k">"locked"</span>: false },
+  { <span class="k">"id"</span>: "a9…", <span class="k">"name"</span>: "Graduation cap", <span class="k">"cost"</span>: 2200,
+    <span class="k">"required_stage"</span>: "adult",
+    <span class="k">"owned"</span>: false, <span class="k">"equipped"</span>: false, <span class="k">"locked"</span>: true }
+]</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td class="name">locked</td><td>The pet has not reached <code>required_stage</code>. Buying is a 403 regardless of balance</td></tr>
+              <tr><td class="name">owned</td><td>Already bought. Buying again is refused; it cannot be bought twice</td></tr>
+              <tr><td class="name">equipped</td><td>Currently on the pet. Always false when <code>owned</code> is false</td></tr>
+              <tr><td class="name">cost</td><td>Green points. Priced against roughly 500-2,500 points per ride, so the cheapest item is one shared trip</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Affordability is not in the response.</strong> The balance is in
+          the same screen's <code>/rewards/me</code> or <code>/pet/me</code> payload, and
+          comparing the two is the client's job. Returning <code>affordable</code> would go stale
+          the moment anything was bought.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="pet-buy">
+      <div class="ep-head">
+        <span class="verb v-post">post</span>
+        <span class="ep-path">/api/v1/pet/accessories/buy</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Spend points. Returns the pet as it now stands, including the new balance.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>POST /api/v1/pet/accessories/buy
+
+{ <span class="k">"accessory_id"</span>: "a1b2c3d4-…" }</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">201</div>
+<pre><span class="c">// the same shape as GET /pet/me</span>
+{
+  <span class="k">"pet_stage"</span>: "hatched",
+  <span class="k">"green_points"</span>: 1280,   <span class="c">// was 1680</span>
+  <span class="k">"owned"</span>: [ … ]
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">402</td><td><code>InsufficientPointsError</code> - not enough green points. Ride more</td></tr>
+              <tr><td class="num">403</td><td><code>StageLockedError</code> - the pet has not reached the item's <code>required_stage</code></td></tr>
+              <tr><td class="num">404</td><td>No such accessory</td></tr>
+              <tr><td class="num">500</td><td>Already owned. A bare <code>DomainError</code>: the shop should not have offered it, so reaching this is a client bug</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>A refused purchase takes nothing.</strong> Checks and deduction
+          happen in one transaction in <code>buy_accessory()</code>
+          (<code>0005_buy_accessory.sql</code>), under <code>FOR UPDATE</code> on the caller's own
+          user row - the same reason booking a seat is a SQL function. Two taps on <em>Buy</em>
+          would otherwise both read the same balance and both pass the check.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="pet-equip">
+      <div class="ep-head">
+        <span class="verb v-put">put</span>
+        <span class="ep-path">/api/v1/pet/accessories/{accessory_id}/equip</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>Put an owned accessory on the pet, or take it off. Idempotent in both directions, and
+          costs nothing either way.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>PUT /api/v1/pet/accessories/a1b2c3d4-…/equip
+
+{ <span class="k">"equipped"</span>: true }</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre><span class="c">// the pet again, so one call updates the screen</span>
+{ <span class="k">"pet_stage"</span>: "hatched", <span class="k">"green_points"</span>: 1280,
+  <span class="k">"owned"</span>: [ { …, <span class="k">"equipped"</span>: true } ] }</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">404</td><td>The caller does not own that accessory - including when it exists and someone else does</td></tr>
+              <tr><td class="num">422</td><td>The path segment is not a UUID, or <code>equipped</code> is missing</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Taking a hat off is not a refund.</strong> Ownership and balance
+          are untouched by either direction. There is no sell.</div>
+      </div>
+    </article>
   </section>
 
   <section id="errors">
@@ -1252,7 +1637,8 @@ Authorization: Bearer &lt;clerk_jwt&gt;
         <tbody>
           <tr><td class="num">400</td><td class="name">InvalidInputError</td><td>Well-formed, but breaks a business rule</td></tr>
           <tr><td class="num">401</td><td class="name">InvalidCredentialsError</td><td>Token missing, malformed, expired, or not signed by Clerk</td></tr>
-          <tr><td class="num">403</td><td class="name">PermissionDeniedError</td><td>Authenticated, but not allowed. Today: a non-Monash email</td></tr>
+          <tr><td class="num">402</td><td class="name">InsufficientPointsError</td><td>Not enough green points for what was asked</td></tr>
+          <tr><td class="num">403</td><td class="name">PermissionDeniedError<br>StageLockedError</td><td>Authenticated, but not allowed: a non-Monash email, completing someone else's ride, or an accessory above the pet's stage</td></tr>
           <tr><td class="num">404</td><td class="name">NotFoundError</td><td>Does not exist, or the caller may not know that it does</td></tr>
           <tr><td class="num">409</td><td class="name">RideFullError<br>AlreadyBookedError</td><td>Nothing wrong with the request; the world changed underneath it</td></tr>
           <tr><td class="num">422</td><td class="name">FastAPI validation</td><td>Body or query does not match the schema</td></tr>
@@ -1290,30 +1676,40 @@ Authorization: Bearer &lt;clerk_jwt&gt;
         </tbody>
       </table>
     </div>
-    <p class="measure"><code>accessory_category</code> exists in the database but no endpoint
-      returns it yet.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Enum</th><th>Values</th></tr></thead>
+        <tbody>
+          <tr><td class="name">accessory_category</td><td><code>headwear</code> <code>eyewear</code> <code>clothing</code> <code>background</code> <code>held_item</code></td></tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section id="planned">
-    <div class="eyebrow">Not built yet</div>
-    <h2>Specified, not callable</h2>
-    <p class="measure">These are in <code>CLAUDE.md</code> and the sprint plan but are not mounted
-      on the router. A request to any of them gets a 404 from FastAPI before reaching any of your
-      code, so do not build against them yet.</p>
-    <div class="planned">
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/rewards/me</span><span class="sprint">sprint 5</span></div>
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/me</span><span class="sprint">sprint 6</span></div>
-      <div class="row"><span class="verb v-get">get</span><span class="ppath">/api/v1/pet/accessories</span><span class="sprint">sprint 6</span></div>
-      <div class="row"><span class="verb v-post">post</span><span class="ppath">/api/v1/pet/accessories/buy</span><span class="sprint">sprint 6</span></div>
-      <div class="row"><span class="verb v-put">put</span><span class="ppath">/api/v1/pet/accessories/{id}/equip</span><span class="sprint">sprint 6</span></div>
+    <div class="eyebrow">Not built</div>
+    <h2>Specified elsewhere, deliberately absent</h2>
+    <p class="measure">Nothing in <code>CLAUDE.md</code>'s endpoint list is unmounted any more.
+      Two items from the proposal are missing on purpose rather than by omission, and both are
+      recorded as out of scope in <code>docs/build_plan.md</code>:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Requirement</th><th>Would have been</th><th>Why not</th></tr></thead>
+        <tbody>
+          <tr><td class="name">REQ-009</td><td>cost owed per passenger</td><td>Descoped in <code>build_plan.md</code>. Money between students needs a settlement story the project does not have, and the comparison dashboard already shows what a seat costs</td></tr>
+          <tr><td class="name">REQ-012</td><td>in-app messaging</td><td>Never scheduled. Phone numbers are revealed once a booking is confirmed, which is what the requirement was for</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="note"><strong>Everything left is a reward.</strong> The marketplace and the
-      comparison are complete. What remains is Sprint 6: the points a completed ride earns, the
-      pet those points feed, and the shop.</div>
+    <div class="note"><strong>The marketplace, the comparison and the rewards are all complete.
+      </strong> Posting, searching, booking, cancelling, comparing, completing, earning, buying
+      and wearing are all live endpoints with tests behind them.</div>
   </section>
 
   <footer>
-    <p>Read off the live route table on 13 September 2026, with Sprint 5's comparison dashboard landed and <code>GET /rides/{ride_id}/passengers</code> added for the driver's view. If this
+    <p>Read off the live route table on 2 October 2026, with Sprint 6 landed: ride completion,
+      rewards, the pet and its shop, plus <code>co2_saved</code> and <code>points_earned</code>
+      added to every ride response so a finished trip can show what it earned. If this
       file and the running app disagree, the app is right: check <code>app/api/router.py</code>
       and the route modules under <code>app/api/routes/</code>. Field shapes come from
       <code>app/schemas/</code>, status codes from <code>app/exceptions/errors.py</code>.</p>

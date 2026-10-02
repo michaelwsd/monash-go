@@ -82,11 +82,25 @@ Supabase SQL editor and run it, in order. Number new files sequentially (`0004_.
 and never edit one that has already been applied to the shared database. Write a new
 file instead.
 
-`0003_book_seat.sql` holds functions rather than tables: `book_seat` and
-`cancel_booking`, called over RPC. Booking is the only place two users genuinely
-collide, and a `SELECT ... FOR UPDATE` inside a database transaction is the only thing
-that can serialise them - application code has a gap between reading the seat count and
-writing it, and two requests fit inside that gap.
+Three of the migrations hold functions rather than tables, all called over RPC, all for
+the same reason: each is a read-decide-write on something two requests can collide over,
+and application code has a gap between the read and the write that a second request fits
+inside. A `SELECT ... FOR UPDATE` in a database transaction is the only thing that
+closes it; `threading.Lock` would protect one uvicorn worker out of however many are
+running.
+
+| File | Functions | Guards |
+|---|---|---|
+| `0003_book_seat.sql` | `book_seat`, `cancel_booking` | the seat count, against two passengers claiming the last seat |
+| `0004_complete_ride.sql` | `complete_ride` | paying for a ride twice. A non-null `rides.co2_saved` is the marker that it has been paid, so two taps give one payout and two 200s |
+| `0005_buy_accessory.sql` | `buy_accessory` | the points balance, against two taps on *Buy* both passing one check |
+
+Each returns a result word (`'seat_taken'`, `'already_completed'`, `'insufficient_points'`)
+rather than raising, and the repository maps the word to a domain error. Postgres exceptions
+do not survive the trip through PostgREST in a form worth switching on.
+
+`0006_seed_accessories.sql` is data, not schema: the twelve shop items, priced against
+roughly 500-2,500 points per ride.
 
 To populate the vehicle lookup table:
 
@@ -256,14 +270,16 @@ Grab `$TOKEN` from the browser devtools on a signed-in frontend session.
 ## The API
 
 `docs/api-reference.html` documents every endpoint the app actually serves, read off the
-live route table rather than the plan: request and response shapes, field rules, status
-codes, and a list of what is specified but not yet built. Open it in a browser.
+live route table rather than the plan: request and response shapes, field rules and status
+codes. Open it in a browser.
 
-Sixteen endpoints are live as of Sprint 5: user sync and profile, vehicle registration and
-the reference lookup, the five rides endpoints, the three bookings endpoints, and the comparison. What remains is
-Sprint 6: the points a completed ride earns, the pet those points feed, and the shop.
+All twenty-one are live as of Sprint 6: user sync and profile, vehicle registration and
+the reference lookup, the six rides endpoints, the three bookings endpoints, the
+comparison, and the five that make up rewards and the pet. Nothing in `CLAUDE.md`'s
+endpoint list is unmounted. REQ-009 (cost owed) and REQ-012 (messaging) are absent on
+purpose, both recorded as out of scope in `docs/build_plan.md`.
 
-Three rules that catch people out:
+Four rules that catch people out:
 
 - **`distance_km` is never sent by a client.** It comes from the cached driving route, and
   `RideCreate` rejects it outright. Every emissions and points figure multiplies it.
@@ -277,6 +293,12 @@ Three rules that catch people out:
   `GET /rides/{ride_id}/passengers` hands the driver their passengers' numbers and nobody
   else's (403). Two response models decide the first, an ownership check the second.
   Cancelling takes the number away again on both sides.
+- **Completing a ride is the only thing that pays, and everyone gets the full figure.**
+  `PATCH /rides/{ride_id}/complete`, driver only, after departure. A 7.26 kg ride credits
+  the driver and *each* passenger 7.26 kg and 726 points - not a share each. That is
+  gamification rather than carbon accounting, and it is what the pet thresholds were
+  calibrated against; `rides.co2_saved` keeps the real unmultiplied number. Calling it
+  twice is a 200 with `already_completed: true` and no second payout.
 
 ---
 

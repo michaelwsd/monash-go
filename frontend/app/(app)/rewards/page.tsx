@@ -8,6 +8,7 @@ import { ArrowRight, Check, Loader2, Lock, Sprout } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Pet, STAGE_LABEL, ANCHORS } from "@/components/pet";
 import { ACCESSORY_ART, type Slot } from "@/components/pet-accessories";
+import { PetPreview } from "@/components/pet-preview";
 import { ErrorState, FormError, Skeleton } from "@/components/status-blocks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -285,11 +286,16 @@ function Shop({
 
   return (
     <Card className="gap-4 p-3.5">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <p className={LABEL}>Shop</p>
-        <p className="text-xs text-muted-foreground tabular-nums">
-          {points.toLocaleString()} points to spend
-        </p>
+        <div className="flex items-center gap-2.5">
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {points.toLocaleString()} points to spend
+          </p>
+          {/* Dev only: tree-shaken out of a production build, so students
+              never see items they have not earned. */}
+          {process.env.NODE_ENV === "development" && <PetPreview />}
+        </div>
       </div>
 
       {error && <FormError>{error}</FormError>}

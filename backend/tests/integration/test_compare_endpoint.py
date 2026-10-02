@@ -1,4 +1,4 @@
-"""GET /compare/{ride_id} on the real app.
+"""GET /compare/{ride_id} and GET /compare/route on the real app.
 
 test_compare_service.py proves the numbers. This proves the wiring it cannot
 see: the route mounts at /api/v1, MapsDep injects, the three modes arrive in
@@ -224,3 +224,58 @@ def test_a_ride_id_that_is_not_a_uuid_is_422(
 
 def test_comparing_without_a_token_is_401(wired: TestClient) -> None:
     assert wired.get(f"{COMPARE_URL}/{RIDE.id}").status_code == 401
+
+
+# --- GET /compare/route ---------------------------------------------------
+
+
+def test_a_route_estimate_is_not_swallowed_by_the_ride_path(
+    wired: TestClient, make_token: Callable[..., str]
+) -> None:
+    """/route is declared before /{ride_id}. The other way round this would be
+    a 422 for "route" not being a UUID."""
+    response = wired.get(
+        f"{COMPARE_URL}/route",
+        params={"origin": "peninsula", "destination": "caulfield"},
+        headers=auth(make_token(sub=CLERK_ID)),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [m["mode"] for m in payload["modes"]] == ["carpool", "transit", "private"]
+    assert payload["origin"] == "peninsula"
+    assert payload["distance_km"] == pytest.approx(23.24)
+    assert payload["fuel_consumption"] == pytest.approx(11.1)
+    assert payload["riders"] == 1
+    assert payload["drive_summary"] == "Wellington Rd and M1"
+    assert payload["transit_summary"] == "Bus 691 → Bus 900"
+    assert "ride_id" not in payload
+
+
+def test_a_route_estimate_for_an_unknown_campus_is_422(
+    wired: TestClient, make_token: Callable[..., str]
+) -> None:
+    response = wired.get(
+        f"{COMPARE_URL}/route",
+        params={"origin": "narnia", "destination": "caulfield"},
+        headers=auth(make_token(sub=CLERK_ID)),
+    )
+    assert response.status_code == 422
+
+
+def test_a_route_estimate_for_one_campus_to_itself_is_400(
+    wired: TestClient, make_token: Callable[..., str]
+) -> None:
+    response = wired.get(
+        f"{COMPARE_URL}/route",
+        params={"origin": "clayton", "destination": "clayton"},
+        headers=auth(make_token(sub=CLERK_ID)),
+    )
+    assert response.status_code == 400
+
+
+def test_a_route_estimate_without_a_token_is_401(wired: TestClient) -> None:
+    response = wired.get(
+        f"{COMPARE_URL}/route", params={"origin": "clayton", "destination": "caulfield"}
+    )
+    assert response.status_code == 401

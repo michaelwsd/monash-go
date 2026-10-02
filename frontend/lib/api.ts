@@ -386,19 +386,39 @@ export interface ModeComparison {
 }
 
 /**
- * backend/app/schemas/compare.py :: Comparison. The same trip three ways, plus
- * the inputs it was computed from, so the screen can say why two comparisons
- * differ. Modes always arrive as carpool, transit, private.
+ * backend/app/schemas/compare.py :: ComparisonBase. The same trip three ways,
+ * plus the inputs it was computed from, so the screen can say why two
+ * comparisons differ. Modes always arrive as carpool, transit, private.
  */
-export interface Comparison {
-  ride_id: string;
-  /** Confirmed bookings plus the caller, unless they already hold a seat. */
+export interface ComparisonBase {
+  /** Passengers the carpool cost is split between. */
   riders: number;
   is_concession: boolean;
   /** Dollars per litre, today's median. Null for an electric car. */
   fuel_price: number | null;
   modes: ModeComparison[];
   transit_legs: TransitLeg[] | null;
+}
+
+/** backend/app/schemas/compare.py :: Comparison. One posted ride, the driver's own car. */
+export interface Comparison extends ComparisonBase {
+  ride_id: string;
+}
+
+/**
+ * backend/app/schemas/compare.py :: RouteEstimate. A campus pair with no ride
+ * behind it: the fleet-average petrol car, one passenger, and the routes
+ * Google returned for driving and public transport.
+ */
+export interface RouteEstimate extends ComparisonBase {
+  origin: Campus;
+  destination: Campus;
+  distance_km: number;
+  /** L/100km of the assumed car. */
+  fuel_consumption: number;
+  /** The road taken, e.g. "Monash Fwy/M1". */
+  drive_summary: string | null;
+  transit_summary: string | null;
 }
 
 /**
@@ -408,4 +428,44 @@ export interface Comparison {
  */
 export function getComparison(rideId: string, options: ApiOptions): Promise<Comparison> {
   return apiFetch<Comparison>(`/compare/${rideId}`, options);
+}
+
+/** GET /compare/route. A rough comparison for a pair nobody has posted a ride on. */
+export function getRouteEstimate(
+  route: { origin: Campus; destination: Campus },
+  options: ApiOptions,
+): Promise<RouteEstimate> {
+  const params = new URLSearchParams(route);
+  return apiFetch<RouteEstimate>(`/compare/route?${params.toString()}`, options);
+}
+
+/**
+ * A Google Maps directions link between two campuses. Keyless - it opens the
+ * Maps site or app, it does not call the API. The addresses mirror
+ * CAMPUS_ADDRESSES in backend/app/clients/maps.py, so the link plans the same
+ * journey the figures were computed from. If one changes, change both.
+ *
+ * https://developers.google.com/maps/documentation/urls/get-started#directions-action
+ */
+const CAMPUS_ADDRESSES: Record<Campus, string> = {
+  clayton: "Monash University Clayton Campus, Wellington Rd, Clayton VIC 3800, Australia",
+  caulfield:
+    "Monash University Caulfield Campus, 900 Dandenong Rd, Caulfield East VIC 3145, Australia",
+  peninsula: "Monash University Peninsula Campus, McMahons Rd, Frankston VIC 3199, Australia",
+  parkville: "Monash University Parkville Campus, 381 Royal Parade, Parkville VIC 3052, Australia",
+  city: "Monash University City Campus, 750 Collins St, Docklands VIC 3008, Australia",
+};
+
+export function googleMapsDirections(
+  origin: Campus,
+  destination: Campus,
+  travelmode: "driving" | "transit",
+): string {
+  const params = new URLSearchParams({
+    api: "1",
+    origin: CAMPUS_ADDRESSES[origin],
+    destination: CAMPUS_ADDRESSES[destination],
+    travelmode,
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
 }

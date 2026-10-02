@@ -388,6 +388,7 @@ Content-Type: application/json</pre>
       <a href="#bookings-me"><span class="verb v-get">get</span><span class="ipath">/api/v1/bookings/me</span><span class="iwhat">the caller's bookings</span></a>
       <a href="#bookings-cancel"><span class="verb v-delete">del</span><span class="ipath">/api/v1/bookings/{booking_id}</span><span class="iwhat">give the seat back</span></a>
       <a href="#compare"><span class="verb v-get">get</span><span class="ipath">/api/v1/compare/{ride_id}</span><span class="iwhat">the same trip three ways: time, cost, CO₂</span></a>
+      <a href="#compare-route"><span class="verb v-get">get</span><span class="ipath">/api/v1/compare/route</span><span class="iwhat">a rough comparison for a route nobody has posted</span></a>
     </nav>
   </section>
 
@@ -1235,6 +1236,71 @@ Authorization: Bearer &lt;clerk_jwt&gt;
           fetches once each morning and the request path only ever reads the newest row, so two
           comparisons minutes apart cannot disagree, and an outage costs a day of freshness rather
           than the dashboard.</div>
+      </div>
+    </article>
+
+    <article class="endpoint" id="compare-route">
+      <div class="ep-head">
+        <span class="verb v-get">get</span>
+        <span class="ep-path">/api/v1/compare/route</span>
+        <span class="badge b-auth">auth</span>
+      </div>
+      <div class="ep-body">
+        <p>The same comparison for a campus pair with no ride behind it, so a search that finds
+          nothing still answers "what would this trip cost?". There is no driver's car, so it
+          prices the fleet-average petrol car (11.1 L/100km, ABS) with one passenger, and it
+          carries the routes Google returned so the page can draw the journey.</p>
+        <div class="cols">
+          <div class="col">
+            <div class="eyebrow">Request</div>
+<pre>GET /api/v1/compare/route?origin=peninsula&amp;destination=caulfield</pre>
+          </div>
+          <div class="col">
+            <div class="eyebrow">200</div>
+<pre>{
+  <span class="k">"origin"</span>: "peninsula",
+  <span class="k">"destination"</span>: "caulfield",
+  <span class="k">"distance_km"</span>: 43.84,
+  <span class="k">"fuel_consumption"</span>: 11.1,
+  <span class="k">"drive_summary"</span>: "M3 and M1",
+  <span class="k">"transit_summary"</span>: "Bus 783 → Train Frankston",
+  <span class="k">"riders"</span>: 1,
+  <span class="k">"is_concession"</span>: true,
+  <span class="k">"fuel_price"</span>: 2.369,
+  <span class="k">"modes"</span>: [
+    { <span class="k">"mode"</span>: "carpool", <span class="k">"duration_min"</span>: 37, <span class="k">"cost"</span>: 11.53, <span class="k">"co2_kg"</span>: 5.62 },
+    { <span class="k">"mode"</span>: "transit", <span class="k">"duration_min"</span>: 66, <span class="k">"cost"</span>: 2.85,  <span class="k">"co2_kg"</span>: 1.36 },
+    { <span class="k">"mode"</span>: "private", <span class="k">"duration_min"</span>: 37, <span class="k">"cost"</span>: 11.53, <span class="k">"co2_kg"</span>: 11.24 }
+  ],
+  <span class="k">"transit_legs"</span>: [ … ]
+}</pre>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Field</th><th>Means</th></tr></thead>
+            <tbody>
+              <tr><td class="name">distance_km</td><td>The cached driving distance between the two campuses</td></tr>
+              <tr><td class="name">fuel_consumption</td><td>L/100km of the assumed car. Always the fleet average, never a user's own car</td></tr>
+              <tr><td class="name">riders</td><td>Always 1: the smallest carpool, so the estimate never overstates what sharing saves</td></tr>
+              <tr><td class="name">drive_summary, transit_summary</td><td>Google's one-line route names, for drawing the journey</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              <tr><td class="num">400</td><td>Origin and destination are the same campus</td></tr>
+              <tr><td class="num">404</td><td>No petrol price on record yet</td></tr>
+              <tr><td class="num">422</td><td>A campus that is not in the CAMPUS enum</td></tr>
+              <tr><td class="num">502</td><td>The route is not cached and Google could not be reached</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>Declared before <code>/{ride_id}</code>.</strong> FastAPI
+          matches path operations in order; the other way round, <code>route</code> would be
+          read as a ride id and rejected as a bad UUID.</div>
       </div>
     </article>
   </section>

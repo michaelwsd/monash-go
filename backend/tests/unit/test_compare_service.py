@@ -19,8 +19,13 @@ from uuid import UUID, uuid4
 import httpx
 import pytest
 
-from app.core.constants import ELECTRICITY_PRICE, MYKI_CONCESSION_FARE, MYKI_FULL_FARE
-from app.exceptions.errors import NotFoundError
+from app.core.constants import (
+    ELECTRICITY_PRICE,
+    FLEET_AVG_CONSUMPTION,
+    MYKI_CONCESSION_FARE,
+    MYKI_FULL_FARE,
+)
+from app.exceptions.errors import InvalidInputError, NotFoundError
 from app.schemas.booking import Booking
 from app.schemas.enums import Campus, FuelType, TravelMode
 from app.schemas.ride import Ride
@@ -424,3 +429,79 @@ def test_a_caller_with_no_user_row_is_a_not_found(monkeypatch: pytest.MonkeyPatc
     row, _ = install(monkeypatch)
     with pytest.raises(NotFoundError):
         compare_service.compare(DB, HTTP, clerk_id="user_nobody", ride_id=row.id)
+
+
+# --- a route with no ride on it ------------------------------------------
+#
+# The search page asks for this when nobody has posted the pair. No driver's
+# car exists, so it prices the fleet-average petrol car (11.1 L/100km) over
+# the cached drive distance, 23.24 km in the fake, with one passenger.
+
+ESTIMATE_KM = 23.24
+FLEET_SOLO_CO2 = ESTIMATE_KM * (FLEET_AVG_CONSUMPTION / 100) * 2.31  # 5.959 kg
+
+
+def estimate(origin: Campus = "clayton", destination: Campus = "caulfield") -> Any:
+    return compare_service.estimate(
+        DB, HTTP, clerk_id=VIEWER.clerk_id, origin=origin, destination=destination
+    )
+
+
+def test_an_estimate_prices_the_fleet_average_car_over_the_drive_distance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install(monkeypatch)
+    result = estimate()
+    private = mode(result, "private")
+    assert result.distance_km == ESTIMATE_KM
+    assert result.fuel_consumption == FLEET_AVG_CONSUMPTION
+    assert private.co2_kg == pytest.approx(FLEET_SOLO_CO2, abs=1e-3)
+    assert private.cost == pytest.approx(ESTIMATE_KM * 0.111 * FUEL_PRICE, abs=1e-3)
+
+
+def test_an_estimate_assumes_one_passenger(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The smallest carpool: two people in the car, the passenger paying the
+    whole fuel bill. It never overstates what sharing saves."""
+    install(monkeypatch)
+    result = estimate()
+    carpool = mode(result, "carpool")
+    assert result.riders == 1
+    assert carpool.co2_kg == pytest.approx(FLEET_SOLO_CO2 / 2, abs=1e-3)
+    assert carpool.cost == pytest.approx(mode(result, "private").cost, abs=1e-6)
+
+
+def test_an_estimate_carries_both_routes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The page draws the journey as well as the numbers."""
+    install(monkeypatch)
+    result = estimate()
+    assert result.origin == "clayton"
+    assert result.destination == "caulfield"
+    assert result.drive_summary == "Wellington Rd and M1"
+    assert result.transit_summary == "Bus 691 → Bus 900"
+    assert result.transit_legs == TRANSIT_LEGS
+    assert mode(result, "transit").duration_min == TRANSIT_MIN
+    assert mode(result, "transit").cost == MYKI_CONCESSION_FARE
+
+
+def test_an_estimate_asks_for_the_petrol_price(monkeypatch: pytest.MonkeyPatch) -> None:
+    _, fuel = install(monkeypatch)
+    estimate()
+    assert fuel.asked == ["petrol"]
+
+
+def test_an_estimate_for_one_campus_to_itself_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install(monkeypatch)
+    with pytest.raises(InvalidInputError):
+        estimate("clayton", "clayton")
+
+
+def test_an_estimate_for_a_caller_with_no_user_row_is_a_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install(monkeypatch)
+    with pytest.raises(NotFoundError):
+        compare_service.estimate(
+            DB, HTTP, clerk_id="user_nobody", origin="clayton", destination="caulfield"
+        )

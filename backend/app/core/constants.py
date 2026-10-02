@@ -29,7 +29,14 @@ TRANSIT_FACTORS: dict[TransitMode, float] = {"train": 0.038, "bus": 0.077, "tram
 # is the petrol factor, petrol dominating the light passenger fleet.
 #
 # ASSUMPTION: every passenger would otherwise have driven alone.
-FLEET_AVG_RATE = (11.1 / 100) * 2.31
+FLEET_AVG_CONSUMPTION = 11.1  # L/100km
+FLEET_AVG_FUEL_TYPE: FuelType = "petrol"
+FLEET_AVG_RATE = (FLEET_AVG_CONSUMPTION / 100) * EMISSION_FACTORS[FLEET_AVG_FUEL_TYPE]
+
+# A route estimate (no ride posted yet) has no real car or passenger list, so it
+# prices the fleet-average car above with one passenger: the smallest carpool,
+# which never overstates what sharing saves.
+ESTIMATE_RIDERS = 1
 
 # $ per kWh. Victorian Default Offer 2026-27 residential single-rate usage
 # charge, GST inclusive, effective 1 July 2026, mean of the five distribution

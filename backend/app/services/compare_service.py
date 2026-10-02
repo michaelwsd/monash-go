@@ -3,14 +3,17 @@ from uuid import UUID
 import httpx
 
 from app.core import costs, emissions
-from app.exceptions.errors import NotFoundError
+from app.core.constants import ESTIMATE_RIDERS, FLEET_AVG_CONSUMPTION, FLEET_AVG_FUEL_TYPE
+from app.exceptions.errors import InvalidInputError, NotFoundError, UpstreamServiceError
 from app.repositories import (
     booking_repository,
     ride_repository,
     user_repository,
     vehicle_repository,
 )
-from app.schemas.compare import Comparison, ModeComparison
+from app.schemas.compare import Comparison, ModeComparison, RouteEstimate
+from app.schemas.enums import Campus, FuelType
+from app.schemas.route import CampusRoute
 from app.services import fuel_service, route_service
 from supabase import Client
 
@@ -55,37 +58,16 @@ def compare(db: Client, http: httpx.Client, *, clerk_id: str, ride_id: UUID) -> 
         else fuel_service.latest_price(db, fuel_type=vehicle.fuel_type)
     )
 
-    # put all modes together
-    modes = [
-        ModeComparison(
-            mode="carpool",
-            duration_min=drive.duration_min,
-            cost=costs.cost_rideshare(
-                ride.distance_km, vehicle.fuel_consumption, vehicle.fuel_type, riders, fuel_price
-            ),
-            co2_kg=emissions.co2_rideshare(
-                ride.distance_km, vehicle.fuel_consumption, vehicle.fuel_type, riders + 1
-            ),
-        ),
-        ModeComparison(
-            mode="transit",
-            duration_min=transit.duration_min,
-            cost=costs.cost_transit(viewer.is_concession),
-            co2_kg=emissions.co2_transit(
-                [emissions.TransitLeg(leg.mode, leg.distance_km) for leg in transit.legs or []]
-            ),
-        ),
-        ModeComparison(
-            mode="private",
-            duration_min=drive.duration_min,
-            cost=costs.cost_solo(
-                ride.distance_km, vehicle.fuel_consumption, vehicle.fuel_type, fuel_price
-            ),
-            co2_kg=emissions.co2_solo(
-                ride.distance_km, vehicle.fuel_consumption, vehicle.fuel_type
-            ),
-        ),
-    ]
+    modes = _modes(
+        drive=drive,
+        transit=transit,
+        distance_km=ride.distance_km,
+        fuel_consumption=vehicle.fuel_consumption,
+        fuel_type=vehicle.fuel_type,
+        fuel_price=fuel_price,
+        riders=riders,
+        is_concession=viewer.is_concession,
+    )
 
     return Comparison(
         ride_id=ride.id,
@@ -95,3 +77,93 @@ def compare(db: Client, http: httpx.Client, *, clerk_id: str, ride_id: UUID) -> 
         modes=modes,
         transit_legs=transit.legs,
     )
+
+
+def estimate(
+    db: Client, http: httpx.Client, *, clerk_id: str, origin: Campus, destination: Campus
+) -> RouteEstimate:
+    """The same three-way comparison for a campus pair nobody has posted a ride on.
+
+    There is no driver's car to read, so it prices the fleet-average petrol car
+    with ESTIMATE_RIDERS passengers. A rough figure, labelled as one on screen,
+    so a search that finds nothing still answers "what would this trip cost?".
+    """
+    if origin == destination:
+        raise InvalidInputError("origin and destination must be different campuses")
+
+    viewer = user_repository.get_by_clerk_id(db, clerk_id)  # needed to check concession
+    if not viewer:
+        raise NotFoundError("user not found")
+
+    drive = route_service.get_route(
+        db, http, origin=origin, destination=destination, travel_mode="drive"
+    )
+    transit = route_service.get_route(
+        db, http, origin=origin, destination=destination, travel_mode="transit"
+    )
+    # nullable on the row because a transit total is optional; a drive row
+    # always has one, so a missing figure means the cache is broken
+    if drive.distance_km is None:
+        raise UpstreamServiceError(f"no driving distance for {origin} -> {destination}")
+
+    fuel_price = fuel_service.latest_price(db, fuel_type=FLEET_AVG_FUEL_TYPE)
+
+    return RouteEstimate(
+        origin=origin,
+        destination=destination,
+        distance_km=drive.distance_km,
+        fuel_consumption=FLEET_AVG_CONSUMPTION,
+        drive_summary=drive.route_summary,
+        transit_summary=transit.route_summary,
+        riders=ESTIMATE_RIDERS,
+        is_concession=viewer.is_concession,
+        fuel_price=fuel_price,
+        modes=_modes(
+            drive=drive,
+            transit=transit,
+            distance_km=drive.distance_km,
+            fuel_consumption=FLEET_AVG_CONSUMPTION,
+            fuel_type=FLEET_AVG_FUEL_TYPE,
+            fuel_price=fuel_price,
+            riders=ESTIMATE_RIDERS,
+            is_concession=viewer.is_concession,
+        ),
+        transit_legs=transit.legs,
+    )
+
+
+def _modes(
+    *,
+    drive: CampusRoute,
+    transit: CampusRoute,
+    distance_km: float,
+    fuel_consumption: float,
+    fuel_type: FuelType,
+    fuel_price: float | None,
+    riders: int,
+    is_concession: bool,
+) -> list[ModeComparison]:
+    """carpool, transit and private, in that order. Shared by both entry points
+    so a ride and an estimate can never be priced by different rules."""
+    return [
+        ModeComparison(
+            mode="carpool",
+            duration_min=drive.duration_min,
+            cost=costs.cost_rideshare(distance_km, fuel_consumption, fuel_type, riders, fuel_price),
+            co2_kg=emissions.co2_rideshare(distance_km, fuel_consumption, fuel_type, riders + 1),
+        ),
+        ModeComparison(
+            mode="transit",
+            duration_min=transit.duration_min,
+            cost=costs.cost_transit(is_concession),
+            co2_kg=emissions.co2_transit(
+                [emissions.TransitLeg(leg.mode, leg.distance_km) for leg in transit.legs or []]
+            ),
+        ),
+        ModeComparison(
+            mode="private",
+            duration_min=drive.duration_min,
+            cost=costs.cost_solo(distance_km, fuel_consumption, fuel_type, fuel_price),
+            co2_kg=emissions.co2_solo(distance_km, fuel_consumption, fuel_type),
+        ),
+    ]

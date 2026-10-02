@@ -192,6 +192,22 @@ async function main(): Promise<void> {
   );
   check("the reverse direction does not", !reverse.some((r) => r.id === ride.id));
 
+  step("an empty search still compares the route");
+  const estimate = await api.getRouteEstimate(
+    { origin: "caulfield", destination: "clayton" },
+    { token: rider.token },
+  );
+  check("three modes, in order", estimate.modes.map((m) => m.mode).join(",") === "carpool,transit,private");
+  check("priced with the fleet-average car", estimate.fuel_consumption === 11.1);
+  check("one passenger assumed", estimate.riders === 1);
+  check("the drive distance came from the route cache", estimate.distance_km > 0);
+  check("the transit journey has legs to draw", (estimate.transit_legs?.length ?? 0) > 0);
+  check("a carpool seat emits less than driving alone", estimate.modes[0].co2_kg < estimate.modes[2].co2_kg);
+  check(
+    "the Maps link plans the same pair",
+    api.googleMapsDirections("caulfield", "clayton", "transit").includes("travelmode=transit"),
+  );
+
   step("rider opens the ride");
   let detail = await api.getRide(ride.id, { token: rider.token });
   check("driver name is shown", detail.driver.full_name === "E2E Driver");

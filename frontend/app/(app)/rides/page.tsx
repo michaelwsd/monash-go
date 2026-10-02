@@ -70,7 +70,18 @@ function FindRide() {
       />
 
       {query.origin && query.destination && query.on ? (
-        <Results origin={query.origin} destination={query.destination} on={query.on} />
+        <Results
+          // One instance per search. useQuery keeps its last answer while a
+          // new one loads, which is right for a refresh of the same question
+          // but wrong for a different one: issue #16 showed Clayton ->
+          // Caulfield figures under a Clayton -> Peninsula search. A new key
+          // starts the results from empty, so they are never another search's.
+          // https://react.dev/learn/preserving-and-resetting-state#option-2-resetting-state-with-a-key
+          key={`${query.origin}-${query.destination}-${query.on}`}
+          origin={query.origin}
+          destination={query.destination}
+          on={query.on}
+        />
       ) : (
         <p className="px-1 text-xs text-muted-foreground">
           Pick a route and a day to see who&apos;s driving.
@@ -143,8 +154,7 @@ function Results({ origin, destination, on }: { origin: Campus; destination: Cam
     (token) => searchRides({ origin, destination, on }, { token }),
     [origin, destination, on],
   );
-  // Fetched alongside the rides, not after them, and keyed on the route only:
-  // the estimate does not depend on the day, so changing the date reuses it.
+  // Fetched alongside the rides, not after them.
   const estimate = useQuery(
     (token) => getRouteEstimate({ origin, destination }, { token }),
     [origin, destination],

@@ -27,7 +27,8 @@ import { useCurrentUser } from "@/lib/use-current-user";
 import { useQuery } from "@/lib/use-query";
 import { cn } from "@/lib/utils";
 
-const LABEL = "text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase";
+const LABEL =
+  "text-[10px] font-medium tracking-[0.04em] text-muted-foreground uppercase";
 
 const CATEGORY_NAME: Record<AccessoryCategory, string> = {
   headwear: "Headwear",
@@ -67,13 +68,20 @@ export default function RewardsPage() {
     reloadUser();
   };
 
-  const worn = (shop.data ?? []).filter((i) => i.equipped).map((i) => i.image_url);
+  const worn = (shop.data ?? [])
+    .filter((i) => i.equipped)
+    .map((i) => i.image_url);
 
   return (
     <AppShell title="Rewards">
-      {rewards.status === "loading" && !rewards.data && <Skeleton rows={2} lines={3} />}
+      {rewards.status === "loading" && !rewards.data && (
+        <Skeleton rows={2} lines={3} />
+      )}
       {rewards.status === "error" && (
-        <ErrorState message="Couldn't load your rewards." onRetry={rewards.reload} />
+        <ErrorState
+          message="Couldn't load your rewards."
+          onRetry={rewards.reload}
+        />
       )}
 
       {rewards.data && (
@@ -93,7 +101,13 @@ export default function RewardsPage() {
   );
 }
 
-function Progression({ summary, worn }: { summary: RewardsSummary; worn: string[] }) {
+function Progression({
+  summary,
+  worn,
+}: {
+  summary: RewardsSummary;
+  worn: string[];
+}) {
   const fresh = summary.completed_trips === 0;
 
   return (
@@ -102,7 +116,11 @@ function Progression({ summary, worn }: { summary: RewardsSummary; worn: string[
         {/* The pet gets its own framed patch so it reads as a scene rather
             than clip art floating in the corner of a card. */}
         <div className="flex size-40 shrink-0 items-center justify-center rounded-xl border border-eco-border bg-eco-muted/50 sm:size-44">
-          <Pet stage={summary.pet_stage} equipped={worn} className="size-36 sm:size-40" />
+          <Pet
+            stage={summary.pet_stage}
+            equipped={worn}
+            className="size-36 sm:size-40"
+          />
         </div>
 
         <div className="min-w-0 flex-1 text-center sm:text-left">
@@ -116,7 +134,8 @@ function Progression({ summary, worn }: { summary: RewardsSummary; worn: string[
           {fresh ? (
             <>
               <p className="mt-2 text-sm text-muted-foreground">
-                Your pet hatches and grows with every shared trip. Nothing completed yet.
+                Your pet hatches and grows with every shared trip. Nothing
+                completed yet.
               </p>
               <Button size="lg" className="mt-3.5 w-full sm:w-auto" asChild>
                 <Link href="/rides">
@@ -128,13 +147,26 @@ function Progression({ summary, worn }: { summary: RewardsSummary; worn: string[
           ) : (
             <>
               <dl className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-3 sm:justify-start">
-                <Stat value={`${summary.total_co2_saved.toFixed(1)} kg`} label="CO₂ avoided" eco />
-                <Stat value={summary.green_points.toLocaleString()} label="green points" />
-                <Stat value={String(summary.completed_trips)} label="trips completed" />
+                <Stat
+                  value={`${summary.total_co2_saved.toFixed(1)} kg`}
+                  label="CO₂ avoided"
+                  eco
+                />
+                <Stat
+                  value={summary.green_points.toLocaleString()}
+                  label="green points"
+                />
+                <Stat
+                  value={String(summary.completed_trips)}
+                  label="trips completed"
+                />
               </dl>
 
               <div className="mt-4">
-                <Progress value={summary.stage_progress} className="h-2 [&>*]:bg-eco" />
+                <Progress
+                  value={summary.stage_progress}
+                  className="h-2 [&>*]:bg-eco"
+                />
                 <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
                   {summary.next_stage === null || summary.co2_to_next === null
                     ? "Fully grown. Nothing left to reach."
@@ -202,7 +234,15 @@ function StageRail({ current }: { current: (typeof STAGES)[number] }) {
   );
 }
 
-function Stat({ value, label, eco }: { value: string; label: string; eco?: boolean }) {
+function Stat({
+  value,
+  label,
+  eco,
+}: {
+  value: string;
+  label: string;
+  eco?: boolean;
+}) {
   return (
     <div>
       <dd
@@ -237,7 +277,10 @@ function Shop({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const run = async (id: string, action: (token: string | null) => Promise<unknown>) => {
+  const run = async (
+    id: string,
+    action: (token: string | null) => Promise<unknown>,
+  ) => {
     setError(null);
     setBusy(id);
     try {
@@ -292,20 +335,26 @@ function Shop({
           <p className="text-xs text-muted-foreground tabular-nums">
             {points.toLocaleString()} points to spend
           </p>
-          {/* Dev only: tree-shaken out of a production build, so students
-              never see items they have not earned. */}
-          {process.env.NODE_ENV === "development" && <PetPreview />}
+          {/* Shown everywhere, including the deployed build. It is a view of
+              the artwork, not a way to equip anything: it holds its own state
+              and never calls the API, so it cannot put an unowned item on a
+              real pet. */}
+          <PetPreview />
         </div>
       </div>
 
       {error && <FormError>{error}</FormError>}
 
       {CATEGORY_ORDER.map((category) => {
-        const group = (items ?? []).filter((item) => item.category === category);
+        const group = (items ?? []).filter(
+          (item) => item.category === category,
+        );
         if (group.length === 0) return null;
         return (
           <section key={category} className="flex flex-col gap-2">
-            <h3 className="text-[13px] font-semibold">{CATEGORY_NAME[category]}</h3>
+            <h3 className="text-[13px] font-semibold">
+              {CATEGORY_NAME[category]}
+            </h3>
             <ul className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
               {group.map((item) => (
                 <li key={item.id}>
@@ -313,7 +362,11 @@ function Shop({
                     item={item}
                     affordable={points >= item.cost}
                     busy={busy === item.id}
-                    onBuy={() => void run(item.id, (t) => buyAccessory(item.id, { token: t }))}
+                    onBuy={() =>
+                      void run(item.id, (t) =>
+                        buyAccessory(item.id, { token: t }),
+                      )
+                    }
                     onToggle={() =>
                       void run(item.id, (t) =>
                         equipAccessory(item.id, !item.equipped, { token: t }),
@@ -341,7 +394,13 @@ const PREVIEW_BOX: Record<Slot, string> = {
 
 /** The item on its own, drawn from the same art that goes on the pet. */
 function AccessoryPreview({ item, dim }: { item: ShopItem; dim: boolean }) {
-  const art = ACCESSORY_ART[item.image_url.split("/").pop()?.replace(/\.svg$/, "") ?? ""];
+  const art =
+    ACCESSORY_ART[
+      item.image_url
+        .split("/")
+        .pop()
+        ?.replace(/\.svg$/, "") ?? ""
+    ];
 
   if (!art) {
     // A row someone added in SQL with no drawing behind it. Better a neutral
@@ -353,7 +412,10 @@ function AccessoryPreview({ item, dim }: { item: ShopItem; dim: boolean }) {
     <svg
       viewBox={PREVIEW_BOX[art.slot]}
       aria-hidden
-      className={cn("size-full transition-[filter,opacity]", dim && "opacity-40 grayscale")}
+      className={cn(
+        "size-full transition-[filter,opacity]",
+        dim && "opacity-40 grayscale",
+      )}
     >
       {art.draw(ANCHORS.adult)}
     </svg>
@@ -377,7 +439,9 @@ function ShopCard({
     <div
       className={cn(
         "flex h-full flex-col gap-2 rounded-lg border p-2.5 transition-colors",
-        item.equipped ? "border-eco-border bg-eco-muted/40" : "border-border bg-background",
+        item.equipped
+          ? "border-eco-border bg-eco-muted/40"
+          : "border-border bg-background",
       )}
     >
       <div
@@ -396,17 +460,19 @@ function ShopCard({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium">{item.name}</p>
-        <p
-          className={cn(
-            "mt-0.5 line-clamp-2 text-[11px] text-muted-foreground",
-            item.locked && "capitalize",
+        <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+          {item.locked ? (
+            <>
+              {/* capitalize on the whole line gave "Hatched Unlocks This":
+                  the CSS capitalises every word, and only the stage is one. */}
+              <span className="capitalize">{item.required_stage}</span> unlocks
+              this
+            </>
+          ) : item.owned ? (
+            (item.description ?? "Owned")
+          ) : (
+            (item.description ?? "")
           )}
-        >
-          {item.locked
-            ? `${item.required_stage} unlocks this`
-            : item.owned
-              ? (item.description ?? "Owned")
-              : (item.description ?? "")}
         </p>
       </div>
 

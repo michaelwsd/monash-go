@@ -234,6 +234,12 @@ export interface Ride {
   available_seats: number;
   distance_km: number;
   status: RideStatus;
+  /**
+   * Null until the driver marks the ride complete. Null means "not finished",
+   * never zero - a solo ride legitimately avoids 0.00 kg.
+   */
+  co2_saved: number | null;
+  points_earned: number | null;
   created_at: string;
 }
 
@@ -468,4 +474,118 @@ export function googleMapsDirections(
     travelmode,
   });
   return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+export type PetStage = "egg" | "hatched" | "juvenile" | "adult" | "legendary";
+export type AccessoryCategory =
+  | "headwear"
+  | "eyewear"
+  | "clothing"
+  | "background"
+  | "held_item";
+
+/** backend/app/schemas/ride.py :: RideCompletion */
+export interface RideCompletion {
+  ride_id: string;
+  co2_saved: number;
+  points_earned: number;
+  passengers: number;
+  /** True when the ride had already been completed. The figures are still real. */
+  already_completed: boolean;
+}
+
+/**
+ * PATCH /rides/{id}/complete - the driver confirms the trip happened, which is
+ * what pays everyone on it. Idempotent: a second call answers 200 with the same
+ * figures rather than paying twice.
+ */
+export function completeRide(rideId: string, options: ApiOptions): Promise<RideCompletion> {
+  return apiFetch<RideCompletion>(`/rides/${rideId}/complete`, {
+    ...options,
+    method: "PATCH",
+  });
+}
+
+/** backend/app/schemas/rewards.py :: RewardsSummary. REQ-013's impact figures. */
+export interface RewardsSummary {
+  green_points: number;
+  total_co2_saved: number;
+  pet_stage: PetStage;
+  /** Null at 'legendary' - there is nothing above it. */
+  next_stage: PetStage | null;
+  co2_to_next: number | null;
+  /** 0-100 through the current stage. */
+  stage_progress: number;
+  completed_trips: number;
+}
+
+export function getRewards(options: ApiOptions): Promise<RewardsSummary> {
+  return apiFetch<RewardsSummary>("/rewards/me", options);
+}
+
+/** backend/app/schemas/pet.py :: Accessory */
+export interface Accessory {
+  id: string;
+  name: string;
+  description: string | null;
+  category: AccessoryCategory;
+  cost: number;
+  required_stage: PetStage;
+  image_url: string;
+}
+
+/**
+ * A catalogue row as one user sees it. `locked` and affordability are separate
+ * on purpose: locked is a pet that has not grown far enough, which no amount of
+ * points fixes.
+ */
+export interface ShopItem extends Accessory {
+  owned: boolean;
+  equipped: boolean;
+  locked: boolean;
+}
+
+export interface OwnedAccessory {
+  accessory: Accessory;
+  equipped: boolean;
+  purchased_at: string;
+}
+
+/** backend/app/schemas/pet.py :: Pet */
+export interface Pet {
+  pet_stage: PetStage;
+  total_co2_saved: number;
+  green_points: number;
+  owned: OwnedAccessory[];
+}
+
+export function getPet(options: ApiOptions): Promise<Pet> {
+  return apiFetch<Pet>("/pet/me", options);
+}
+
+/** GET /pet/accessories - the catalogue, cheapest first. */
+export function getShop(options: ApiOptions): Promise<ShopItem[]> {
+  return apiFetch<ShopItem[]>("/pet/accessories", options);
+}
+
+/** POST /pet/accessories/buy - 402 if short of points, 403 if the stage is locked. */
+export function buyAccessory(accessoryId: string, options: ApiOptions): Promise<Pet> {
+  return apiFetch<Pet>("/pet/accessories/buy", {
+    ...options,
+    method: "POST",
+    body: JSON.stringify({ accessory_id: accessoryId }),
+  });
+}
+
+/** PUT /pet/accessories/{id}/equip - ownership and balance are untouched. */
+export function equipAccessory(
+  accessoryId: string,
+  equipped: boolean,
+  options: ApiOptions,
+): Promise<Pet> {
+  return apiFetch<Pet>(`/pet/accessories/${accessoryId}/equip`, {
+    ...options,
+    method: "PUT",
+    body: JSON.stringify({ equipped }),
+  });
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Car, LogOut, Sprout, UserRound } from "lucide-react";
+import { Car, LogOut, Route, Sprout, UserRound } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -93,11 +93,22 @@ export function AppHeader({ greenPoints }: { greenPoints: number }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="gap-1 rounded-full font-medium">
-            <Sprout className="size-3 text-eco" aria-hidden />
-            {greenPoints.toLocaleString()}
-            <span className="hidden sm:inline">pts</span>
-          </Badge>
+          {/* The badge is on every page, so it is the way into rewards -
+              artboard 1k reaches the pet from exactly here. */}
+          <Link
+            href="/rewards"
+            aria-label={`${greenPoints} green points`}
+            className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            <Badge
+              variant="secondary"
+              className="gap-1 rounded-full font-medium transition-colors hover:bg-eco-muted hover:text-eco-foreground"
+            >
+              <Sprout className="size-3 text-eco" aria-hidden />
+              {greenPoints.toLocaleString()}
+              <span className="hidden sm:inline">pts</span>
+            </Badge>
+          </Link>
 
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -130,6 +141,14 @@ export function AppHeader({ greenPoints }: { greenPoints: number }) {
                 <Link href="/vehicles">
                   <Car aria-hidden />
                   My cars
+                </Link>
+              </DropdownMenuItem>
+              {/* Also in the header nav, but that is hidden below sm and the
+                  five bottom tabs are full. Both driver-only pages live here. */}
+              <DropdownMenuItem asChild>
+                <Link href="/drives">
+                  <Route aria-hidden />
+                  My drives
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

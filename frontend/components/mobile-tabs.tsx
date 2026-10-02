@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck, Car, Home, Route, Search } from "lucide-react";
+import { CalendarCheck, Car, Home, Search, Sprout } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ const TABS = [
   { label: "Find", href: "/rides", icon: Search, exact: true },
   { label: "Post", href: "/rides/new", icon: Car, exact: true },
   { label: "Trips", href: "/trips", icon: CalendarCheck, exact: false },
-  { label: "Drives", href: "/drives", icon: Route, exact: false },
+  { label: "Pet", href: "/rewards", icon: Sprout, exact: false },
 ];
 
 /**

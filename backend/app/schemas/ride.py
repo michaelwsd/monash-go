@@ -61,6 +61,11 @@ class RideResponse(BaseModel):
     available_seats: int
     distance_km: float
     status: RideStatus
+    # Null until the driver marks the ride complete, which is the only thing
+    # that writes them. Null means "not finished yet", never zero: a solo ride
+    # legitimately avoids 0.00 kg, and the screen must tell those apart.
+    co2_saved: float | None
+    points_earned: int | None
     created_at: datetime
 
 
@@ -114,3 +119,19 @@ class RidePassenger(BaseModel):
     full_name: str
     phone: str
     booking_id: UUID
+
+
+class RideCompletion(BaseModel):
+    """What marking a ride complete awarded.
+
+    already_completed is True when the ride had been completed before this
+    call. The figures are still returned, because the screen wants to show what
+    the trip earned either way - a driver tapping twice gets the same answer,
+    not an error.
+    """
+
+    ride_id: UUID
+    co2_saved: float
+    points_earned: int
+    passengers: int
+    already_completed: bool

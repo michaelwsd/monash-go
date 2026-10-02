@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from postgrest import CountMethod
+
 from app.schemas.enums import Campus
 from app.schemas.ride import Ride
 from supabase import Client
@@ -80,3 +82,19 @@ def list_for_driver(db: Client, *, driver_id: UUID) -> list[Ride]:
         .execute()
     )
     return [Ride.model_validate(row) for row in res.data]
+
+
+def count_completed_for_user(db: Client, *, user_id: UUID) -> int:
+    """Rides this user has finished as the driver.
+
+    The passenger half is counted from bookings; a trip is one or the other,
+    never both, because a driver cannot book their own ride.
+    """
+    res = (
+        db.table(TABLE)
+        .select("id", count=CountMethod.exact)
+        .eq("driver_id", str(user_id))
+        .eq("status", "completed")
+        .execute()
+    )
+    return res.count or 0

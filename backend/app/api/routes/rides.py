@@ -8,13 +8,14 @@ from app.api.deps import CurrentUser, MapsDep, SupabaseDep
 from app.schemas.enums import Campus
 from app.schemas.ride import (
     Ride,
+    RideCompletion,
     RideCreate,
     RideDetail,
     RideDetailWithContact,
     RidePassenger,
     RideResponse,
 )
-from app.services import ride_service
+from app.services import rewards_service, ride_service
 
 router = APIRouter(prefix="/rides", tags=["rides"])
 
@@ -55,3 +56,13 @@ def get_ride(
 @router.get("/{ride_id}/passengers", response_model=list[RidePassenger])
 def ride_passengers(clerk_id: CurrentUser, ride_id: UUID, db: SupabaseDep) -> list[RidePassenger]:
     return ride_service.list_passengers(db, clerk_id=clerk_id, ride_id=ride_id)
+
+
+@router.patch("/{ride_id}/complete", response_model=RideCompletion)
+def complete_ride(clerk_id: CurrentUser, ride_id: UUID, db: SupabaseDep) -> RideCompletion:
+    """The driver confirms the trip happened, which is what pays everyone.
+
+    Idempotent: a second call answers 200 with the same figures and
+    already_completed set, rather than paying twice or erroring.
+    """
+    return rewards_service.complete_ride(db, clerk_id=clerk_id, ride_id=ride_id)

@@ -74,10 +74,15 @@ SOMEONE_ELSES_CAR = OWNED_CAR.model_copy(update={"id": uuid4(), "owner_id": uuid
 
 
 def tomorrow_at_nine() -> str:
-    """An aware departure, as the frontend would send it. Melbourne is +10:00
-    in September, so this also exercises a non-UTC offset surviving the trip."""
-    day = (datetime.now(UTC) + timedelta(days=1)).date()
-    return f"{day.isoformat()}T09:00:00+10:00"
+    """An aware departure, as the frontend would send it, so this also
+    exercises a non-UTC offset surviving the trip.
+
+    Tomorrow is Melbourne's tomorrow, not UTC's. Before 10:00 Melbourne the UTC
+    date is a day behind, so UTC-tomorrow at 09:00 Melbourne had already
+    departed and the post was a 400. The offset comes from the zone too: it is
+    +11:00 under daylight saving, not always +10:00."""
+    day = datetime.now(MELBOURNE).date() + timedelta(days=1)
+    return datetime(day.year, day.month, day.day, 9, tzinfo=MELBOURNE).isoformat()
 
 
 def body(**overrides: Any) -> dict[str, Any]:

@@ -45,7 +45,12 @@ export function RequireOnboarding({ children }: { children: React.ReactNode }) {
   // A backend that is down must not lock anyone out of a page that does not
   // need it yet. Let them through with no user; the pages that need data will
   // report their own failure.
-  if (query.status === "loading" || needsOnboarding) {
+  //
+  // Only the first load holds the page back. A later reload() - the rewards
+  // page refreshing the points badge after a purchase - must not swap the
+  // whole app for a spinner: that unmounts the page, which then remounts and
+  // refetches everything, and every tap on Wear looked like a full refresh.
+  if ((query.status === "loading" && !query.data) || needsOnboarding) {
     return (
       <div className="flex flex-1 items-center justify-center bg-muted/40">
         <Loader2

@@ -1,10 +1,18 @@
 "use client";
 
+import { Fragment, type ReactNode } from "react";
 import { Bus, Footprints, TrainFront, TramFront } from "lucide-react";
 
 import { Skeleton } from "@/components/status-blocks";
 import { Card } from "@/components/ui/card";
-import type { CompareMode, Comparison, ModeComparison, TransitLeg } from "@/lib/api";
+import {
+  campusLabel,
+  type Campus,
+  type CompareMode,
+  type Comparison,
+  type ModeComparison,
+  type TransitLeg,
+} from "@/lib/api";
 import { formatDuration } from "@/lib/time";
 import type { QueryState } from "@/lib/use-query";
 import { cn } from "@/lib/utils";
@@ -43,7 +51,15 @@ const LEG_ICON = {
  * Degrades quietly. A 404 here also means "no fuel price on record yet", and
  * a comparison that cannot be shown must not stop a seat being booked.
  */
-export function ComparisonPanel({ comparison }: { comparison: QueryState<Comparison> }) {
+export function ComparisonPanel({
+  comparison,
+  origin,
+  destination,
+}: {
+  comparison: QueryState<Comparison>;
+  origin: Campus;
+  destination: Campus;
+}) {
   // Only the first load shows a skeleton. A refetch after a booking keeps the
   // table on screen and dims it, so the numbers update in place rather than
   // the panel vanishing and reappearing.
@@ -55,7 +71,14 @@ export function ComparisonPanel({ comparison }: { comparison: QueryState<Compari
     return <ComparisonUnavailable onRetry={comparison.reload} />;
   }
 
-  return <Table comparison={comparison.data} refreshing={comparison.status === "loading"} />;
+  return (
+    <Table
+      comparison={comparison.data}
+      origin={origin}
+      destination={destination}
+      refreshing={comparison.status === "loading"}
+    />
+  );
 }
 
 /** A comparison that cannot be shown says so in one quiet line, never a red card. */
@@ -74,7 +97,17 @@ export function ComparisonUnavailable({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function Table({ comparison, refreshing }: { comparison: Comparison; refreshing: boolean }) {
+function Table({
+  comparison,
+  origin,
+  destination,
+  refreshing,
+}: {
+  comparison: Comparison;
+  origin: Campus;
+  destination: Campus;
+  refreshing: boolean;
+}) {
   return (
     <Card
       className={cn(
@@ -88,8 +121,8 @@ function Table({ comparison, refreshing }: { comparison: Comparison; refreshing:
 
       {comparison.transit_legs && comparison.transit_legs.length > 0 && (
         <div>
-          <p className={cn(LABEL, "mb-1.5")}>Transit legs</p>
-          <TransitLegs legs={comparison.transit_legs} />
+          <p className={cn(LABEL, "mb-1.5")}>Public transport route</p>
+          <TransitLegs legs={comparison.transit_legs} origin={origin} destination={destination} />
         </div>
       )}
 
@@ -154,37 +187,102 @@ function ModeCell({ row, name, best }: { row: ModeComparison; name: string; best
   );
 }
 
-export function TransitLegs({ legs }: { legs: TransitLeg[] }) {
+/**
+ * The public transport journey as a timeline: the origin campus, each leg,
+ * the destination campus. The two ends are named because the legs alone
+ * ("Walk, Bus 783, Walk...") never say where the trip starts or finishes.
+ */
+export function TransitLegs({
+  legs,
+  origin,
+  destination,
+}: {
+  legs: TransitLeg[];
+  origin: Campus;
+  destination: Campus;
+}) {
   return (
     <ol aria-label="Public transport journey">
+      <Stop campus={origin} note="Start" />
       {legs.map((leg, i) => {
         const Icon = LEG_ICON[leg.mode];
-        const last = i === legs.length - 1;
+        const walk = leg.mode === "walk";
         return (
-          /* One leg per row, joined by a rail. A row never wraps, so five
-             legs read as five lines at any width instead of a ragged run of
-             chips and arrows. */
-          <li
+          <TimelineRow
             key={i}
-            className={cn(
-              "relative flex items-center gap-2.5 pb-2.5",
-              !last &&
-                "before:absolute before:top-5 before:bottom-0 before:left-[9px] before:w-px before:bg-border",
-            )}
-          >
-            <span className="relative z-10 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted">
-              <Icon className="size-3 text-muted-foreground" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-xs font-medium capitalize">
-              {leg.line ? `${leg.mode} ${leg.line}` : leg.mode}
-            </span>
-            <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-              {leg.distance_km.toFixed(1)} km &middot; {formatDuration(leg.duration_min)}
-            </span>
-          </li>
+            marker={<Icon className="size-3 text-muted-foreground" aria-hidden />}
+            label={
+              <span className={cn("capitalize", walk ? "text-muted-foreground" : "font-medium")}>
+                {leg.mode}
+                {leg.line && (
+                  <span className="font-normal text-muted-foreground normal-case">
+                    {" "}
+                    &middot; {lineName(leg)}
+                  </span>
+                )}
+              </span>
+            }
+            detail={`${leg.distance_km.toFixed(1)} km · ${formatDuration(leg.duration_min)}`}
+          />
         );
       })}
+      <Stop campus={destination} note="Arrive" last />
     </ol>
+  );
+}
+
+/* Google names a train by its line ("Frankston") and a bus or tram by its
+   route number ("783"). "Train · Frankston" reads like a destination. */
+function lineName(leg: TransitLeg): string {
+  return leg.mode === "train" ? `${leg.line} line` : `Route ${leg.line}`;
+}
+
+/** A campus at either end of the journey: a ring for the start, a dot for the end. */
+function Stop({ campus, note, last = false }: { campus: Campus; note: string; last?: boolean }) {
+  return (
+    <TimelineRow
+      last={last}
+      marker={
+        <span
+          className={cn(
+            "size-2.5 rounded-full border-2 border-foreground",
+            last ? "bg-foreground" : "bg-background",
+          )}
+        />
+      }
+      label={<span className="font-semibold">{campusLabel(campus)} campus</span>}
+      detail={note}
+    />
+  );
+}
+
+/* One row per stop or leg, joined by a rail. A row never wraps, so a long
+   journey reads as one line per step at any width. */
+function TimelineRow({
+  marker,
+  label,
+  detail,
+  last = false,
+}: {
+  marker: ReactNode;
+  label: ReactNode;
+  detail: string;
+  last?: boolean;
+}) {
+  return (
+    <li
+      className={cn(
+        "relative flex items-center gap-2.5",
+        !last &&
+          "pb-2.5 before:absolute before:top-5 before:bottom-0 before:left-[9px] before:w-px before:bg-border",
+      )}
+    >
+      <span className="relative z-10 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted">
+        {marker}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs">{label}</span>
+      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{detail}</span>
+    </li>
   );
 }
 
@@ -194,5 +292,16 @@ function Assumptions({ comparison }: { comparison: Comparison }) {
     comparison.is_concession ? "concession myki" : "full-fare myki",
     comparison.fuel_price === null ? "electric" : `fuel $${comparison.fuel_price.toFixed(2)}/L`,
   ];
-  return <p className="text-[11px] text-muted-foreground tabular-nums">{parts.join(" · ")}</p>;
+  // Each part stays whole, so a narrow screen wraps between parts, never
+  // inside "fuel $2.40/L".
+  return (
+    <p className="text-[11px] text-muted-foreground tabular-nums">
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && " · "}
+          <span className="whitespace-nowrap">{part}</span>
+        </Fragment>
+      ))}
+    </p>
+  );
 }

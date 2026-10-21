@@ -141,7 +141,11 @@ function Ride({
       </Card>
 
       <div className="sm:col-start-1 sm:row-start-2">
-        <ComparisonPanel comparison={comparison} />
+        <ComparisonPanel
+          comparison={comparison}
+          origin={ride.origin}
+          destination={ride.destination}
+        />
       </div>
 
       <div className="sm:col-start-2 sm:row-start-2 sm:row-span-3 sm:self-start sm:sticky sm:top-4">

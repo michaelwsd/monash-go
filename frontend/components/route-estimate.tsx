@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import { Fragment, type ComponentType, type ReactNode } from "react";
 import { Car, ExternalLink, TrainFront } from "lucide-react";
 
 import { ComparisonUnavailable, LABEL, ModeGrid, TransitLegs } from "@/components/comparison-panel";
@@ -70,7 +70,11 @@ export function RouteEstimatePanel({ estimate }: { estimate: QueryState<RouteEst
           href={googleMapsDirections(route.origin, route.destination, "transit")}
         >
           {route.transit_legs && route.transit_legs.length > 0 ? (
-            <TransitLegs legs={route.transit_legs} />
+            <TransitLegs
+              legs={route.transit_legs}
+              origin={route.origin}
+              destination={route.destination}
+            />
           ) : (
             <p className="text-xs text-muted-foreground">
               {formatDuration(duration(route, "transit"))}
@@ -133,9 +137,16 @@ function Assumptions({ route }: { route: RouteEstimate }) {
     // always petrol here, so always priced; the type allows null for an EV ride
     route.fuel_price !== null && `fuel $${route.fuel_price.toFixed(2)}/L`,
   ].filter(Boolean);
+  // Each part stays whole, so a narrow screen wraps between parts, never
+  // inside "fuel $2.40/L".
   return (
     <p className="text-[11px] text-muted-foreground tabular-nums first-letter:uppercase">
-      {parts.join(" · ")}
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && " · "}
+          <span className="whitespace-nowrap">{part}</span>
+        </Fragment>
+      ))}
     </p>
   );
 }

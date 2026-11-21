@@ -6,7 +6,7 @@ on:
     # not sensitive; this is 06:23 Melbourne in winter and 07:23 in summer.
     # Off the hour for the same reason as the keep-alive: on-the-hour runs are
     # the ones GitHub's scheduler delays or drops under load.
-    - cron: '23 20 * * *'
+    # - cron: '23 20 * * *'
   workflow_dispatch:
 
 # One fetch at a time. A stacked pair would write six rows for the day and

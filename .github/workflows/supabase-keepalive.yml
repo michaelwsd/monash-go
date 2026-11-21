@@ -7,7 +7,7 @@ on:
     # outright under load. On the old every-4-days cadence two dropped runs in
     # a row put the project past Supabase's 7-day pause window, so the schedule
     # now carries enough slack to survive six consecutive misses.
-    - cron: '17 14 * * *'
+    # - cron: '17 14 * * *'
   workflow_dispatch:
 
 # A run already in flight is enough; never stack them.
